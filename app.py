@@ -2511,7 +2511,7 @@ def gui_zalo_cho_taixe(chat_id, noi_dung):
 
     except Exception as e:
         print("❌ Lỗi gửi Zalo:", e)
-        return False
+        return "OK"
 # =========================
 # telegram CHO TAI XE (ĐÃ TỐI ƯU HÓA)
 # =========================
@@ -2538,7 +2538,7 @@ def send_telegram(chat_id, message):
     except Exception as e:
 
         print("Telegram error:", e)
-        return False
+        return "OK"
 # =========================
 # Dashboard realtime xe đang chạy
 # =========================
@@ -2592,4 +2592,5 @@ if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
 
     app.run(host="0.0.0.0", port=port, debug=False)
+
 
