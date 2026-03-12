@@ -1929,130 +1929,118 @@ def telegram_webhook():
         """,(chat_id,)).fetchone()
 
         is_admin = True if admin else False
- 	
-# =================================
-# ADMIN XEM DANH SÁCH XE ĐANG CHẠY
-# =================================
 
-if text == "/dsxe":
-
-    if not is_admin:
-        send_telegram(chat_id,"❌ Bạn không có quyền.")
-        con.close()
-        return "OK"
-
-    rows = con.execute("""
-        SELECT v.plate,
-               d.name,
-               v.work_content
-        FROM vehicles v
-        LEFT JOIN drivers d ON v.driver_id = d.id
-        WHERE v.status = 1
-    """).fetchall()
-
-    if not rows:
-
-        send_telegram(chat_id,"🚗 Hiện không có xe nào đang hoạt động.")
-        con.close()
-        return "OK"
-
-    msg = "🚗 DANH SÁCH XE ĐANG HOẠT ĐỘNG\n\n"
-
-    for r in rows:
-
-        msg += (
-            f"Xe: {r['plate']}\n"
-            f"Tài xế: {r['name']}\n"
-            f"Nội dung: {r['work_content']}\n\n"
-        )
-
-    send_telegram(chat_id,msg)
-
-    con.close()
-    return "OK"
-# =================================
-	# ADMIN XEM DANH SÁCH XE RÃNH
-	# =================================
+        # =================================
+        # ADMIN XEM DANH SÁCH XE ĐANG CHẠY
+        # =================================
 
         if text == "/dsxe":
 
             if not is_admin:
-                 send_telegram(chat_id,"❌ Bạn không có quyền.")
-                 con.close()
-                 return "OK"
-
-            rows = con.execute("""
-                 SELECT v.plate,
-                        d.name,
-                        v.work_content
-                 FROM vehicles v
-                 LEFT JOIN drivers d ON v.driver_id = d.id
-                 WHERE v.status = 0
-                 """).fetchall()
-
-            if not rows:
-
-                send_telegram(chat_id,"🚗 Hiện không có xe nào rãnh.")
+                send_telegram(chat_id,"❌ Bạn không có quyền.")
                 con.close()
                 return "OK"
 
-            msg = "🚗 DANH SÁCH XE ĐANG RÃNH\n\n"
+            rows = con.execute("""
+                SELECT v.plate,
+                       d.name,
+                       v.work_content
+                FROM vehicles v
+                LEFT JOIN drivers d ON v.driver_id = d.id
+                WHERE v.status = 1
+            """).fetchall()
+
+            if not rows:
+                send_telegram(chat_id,"🚗 Hiện không có xe nào đang hoạt động.")
+                con.close()
+                return "OK"
+
+            msg = "🚗 DANH SÁCH XE ĐANG HOẠT ĐỘNG\n\n"
 
             for r in rows:
-
-               msg += (
-                   f"Xe: {r['plate']}\n"
-               
-               )
+                msg += (
+                    f"Xe: {r['plate']}\n"
+                    f"Tài xế: {r['name']}\n"
+                    f"Nội dung: {r['work_content']}\n\n"
+                )
 
             send_telegram(chat_id,msg)
 
             con.close()
             return "OK"
 
+        # =================================
+        # ADMIN XEM DANH SÁCH XE RÃNH
+        # =================================
+
+        if text == "/dsxeranh":
+
+            if not is_admin:
+                send_telegram(chat_id,"❌ Bạn không có quyền.")
+                con.close()
+                return "OK"
+
+            rows = con.execute("""
+                SELECT plate
+                FROM vehicles
+                WHERE status = 0
+            """).fetchall()
+
+            if not rows:
+                send_telegram(chat_id,"🚗 Hiện không có xe nào rãnh.")
+                con.close()
+                return "OK"
+
+            msg = "🚗 DANH SÁCH XE RÃNH\n\n"
+
+            for r in rows:
+                msg += f"Xe: {r['plate']}\n"
+
+            send_telegram(chat_id,msg)
+
+            con.close()
+            return "OK"
 
         # =================================
-# ADMIN XEM TÀI XẾ RẢNH
-# =================================
+        # ADMIN XEM TÀI XẾ RẢNH
+        # =================================
 
-if text == "/taixeranh":
+        if text == "/taixeranh":
 
-    if not is_admin:
+            if not is_admin:
+                send_telegram(chat_id,"❌ Bạn không có quyền.")
+                con.close()
+                return "OK"
 
-        send_telegram(chat_id,"❌ Bạn không có quyền.")
-        con.close()
-        return "OK"
+            rows = con.execute("""
+                SELECT d.name, d.phone
+                FROM drivers d
+                WHERE d.id NOT IN (
+                    SELECT driver_id
+                    FROM vehicles
+                    WHERE status = 1 AND driver_id IS NOT NULL
+                )
+                ORDER BY d.name
+            """).fetchall()
 
-    rows = con.execute("""
-        SELECT d.name, d.phone
-        FROM drivers d
-        WHERE d.id NOT IN (
-            SELECT driver_id
-            FROM vehicles
-            WHERE status = 1 AND driver_id IS NOT NULL
-        )
-        ORDER BY d.name
-    """).fetchall()
+            if not rows:
+                send_telegram(chat_id,"⚠️ Không có tài xế rảnh.")
+                con.close()
+                return "OK"
 
-    if not rows:
+            msg = "👨‍✈️ DANH SÁCH TÀI XẾ RẢNH\n\n"
 
-        send_telegram(chat_id,"⚠️ Không có tài xế rảnh.")
-        con.close()
-        return "OK"
+            for r in rows:
+                msg += (
+                    f"Tài xế: {r['name']}\n"
+                    f"SĐT: {r['phone']}\n\n"
+                )
 
-    msg = "👨‍✈️ DANH SÁCH TÀI XẾ RẢNH\n\n"
+            send_telegram(chat_id,msg)
 
-    for r in rows:
+            con.close()
+            return "OK"
 
-        msg += (
-            f"Tài xế: {r['name']}\n"
-            f"SĐT: {r['phone']}\n\n"
-        )
-
-    send_telegram(chat_id,msg)
-
-    con.close()
-    return "OK"
         # =================================
         # BOT ĐIỀU XE AI (ADMIN)
         # =================================
@@ -2060,7 +2048,6 @@ if text == "/taixeranh":
         if text.startswith("dieuxe"):
 
             if not is_admin:
-
                 send_telegram(chat_id,"❌ Bạn không có quyền điều xe")
                 con.close()
                 return "OK"
@@ -2075,21 +2062,21 @@ if text == "/taixeranh":
 
                 for p in parts:
 
-                    if p.startswith("dieuxe: "):
-                        plate = p.replace("dieuxe:","").upper()
+                    if p.startswith("dieuxe:"):
+                        plate = p.replace("dieuxe:","").strip().upper()
 
-                    if p.startswith("taixe: "):
-                        phone = p.replace("taixe:","")
+                    if p.startswith("taixe:"):
+                        phone = p.replace("taixe:","").strip()
 
                     if p.startswith("noidung:"):
-                        work_content = p.replace("noidung: ","")
+                        work_content = p.replace("noidung:","").strip()
 
                 if not plate or not phone or not work_content:
 
                     send_telegram(
                         chat_id,
                         "⚠️ Cú pháp:\n"
-                        "dieuxe: 94A-001.88 taixe: 0905086253 noidung: Đi công tác"
+                        "dieuxe:94A-001.88 taixe:0905086253 noidung:Đi công tác"
                     )
 
                     con.close()
@@ -2102,13 +2089,11 @@ if text == "/taixeranh":
                 """,(plate,)).fetchone()
 
                 if not vehicle:
-
                     send_telegram(chat_id,"❌ Không tìm thấy xe")
                     con.close()
                     return "OK"
 
                 if vehicle["status"] == 1:
-
                     send_telegram(chat_id,"⚠️ Xe đang hoạt động")
                     con.close()
                     return "OK"
@@ -2120,7 +2105,6 @@ if text == "/taixeranh":
                 """,(phone,)).fetchone()
 
                 if not driver:
-
                     send_telegram(chat_id,"❌ Không tìm thấy tài xế")
                     con.close()
                     return "OK"
@@ -2148,25 +2132,6 @@ Nội dung: {work_content}
 """
                 )
 
-                noi_dung = f"""
-🚗 THÔNG BÁO ĐIỀU XE
-
-Xe: {plate}
-Tài xế: {driver['name']}
-Thời gian: {datetime.now().strftime("%H:%M %d/%m/%Y")}
-
-Nội dung:
-{work_content}
-
-Vui lòng thực hiện theo phân công.
-"""
-
-                if driver["telegram_chat_id"]:
-                    send_telegram(driver["telegram_chat_id"], noi_dung)
-
-                if driver["zalo_user_id"]:
-                    gui_zalo_cho_taixe(driver["zalo_user_id"], noi_dung)
-
                 con.close()
                 return "OK"
 
@@ -2177,8 +2142,6 @@ Vui lòng thực hiện theo phân công.
                 con.close()
                 return "OK"
 
-
-
         # =================================
         # KẾT NỐI TELEGRAM
         # =================================
@@ -2188,7 +2151,6 @@ Vui lòng thực hiện theo phân công.
             parts = text.split(" ")
 
             if len(parts) < 2:
-
                 send_telegram(chat_id,"📱 Cú pháp: ketnoi 0905086253")
                 con.close()
                 return "OK"
@@ -2217,160 +2179,10 @@ Vui lòng thực hiện theo phân công.
                 )
 
             else:
-
                 send_telegram(chat_id,"❌ Số điện thoại chưa có trong hệ thống")
 
             con.close()
             return "OK"
-
-
-
-        # =================================
-        # TÀI XẾ XÁC NHẬN LỆNH
-        # =================================
-
-        if text == "nhan":
-
-            driver = con.execute("""
-                SELECT id
-                FROM drivers
-                WHERE telegram_chat_id=?
-            """,(chat_id,)).fetchone()
-
-            if not driver:
-
-                send_telegram(chat_id,"❌ Bạn chưa liên kết Telegram")
-                con.close()
-                return "OK"
-
-            trip = con.execute("""
-                SELECT id
-                FROM vehicles
-                WHERE driver_id=? AND status=1
-            """,(driver["id"],)).fetchone()
-
-            if not trip:
-
-                send_telegram(chat_id,"⚠️ Không có lệnh điều xe")
-                con.close()
-                return "OK"
-
-            con.execute("""
-                UPDATE vehicles
-                SET driver_confirm=1
-                WHERE id=?
-            """,(trip["id"],))
-
-            con.commit()
-
-            
-            # thông báo cho tài xế
-            send_telegram(
-                chat_id,
-                f"✅ {driver['name']} đã xác nhận nhận lệnh điều xe.\n🚗 Xe: {trip['plate']}"
-            )
-
-            print(f"Tài xế {driver['name']} đã xác nhận lệnh xe {trip['plate']}")
-            con.close()
-            return "OK"
-
-
-
-        # =================================
-        # TÀI XẾ HOÀN THÀNH CHUYẾN
-        # =================================
-
-        if text.startswith("xong"):
-
-            parts = text.split(" ")
-
-            if len(parts) < 2:
-
-                send_telegram(chat_id,"⚠️ Cú pháp: xong 35")
-                con.close()
-                return "OK"
-
-            km = int(parts[1])
-
-            driver = con.execute("""
-                SELECT id,name
-                FROM drivers
-                WHERE telegram_chat_id=?
-            """,(chat_id,)).fetchone()
-
-            if not driver:
-
-                send_telegram(chat_id,"❌ Bạn chưa liên kết Telegram")
-                con.close()
-                return "OK"
-
-            trip = con.execute("""
-                SELECT *
-                FROM vehicles
-                WHERE driver_id=? AND status=1
-            """,(driver["id"],)).fetchone()
-
-            if not trip:
-
-                send_telegram(chat_id,"⚠️ Không có chuyến xe đang chạy")
-                con.close()
-                return "OK"
-
-            msg_time = message.get("date")
-
-            end_time = datetime.fromtimestamp(msg_time).isoformat()
-
-            start_dt = datetime.fromisoformat(trip["start_time"])
-            end_dt = datetime.fromtimestamp(msg_time)
-
-            duration_minutes = int((end_dt-start_dt).total_seconds()/60)
-
-            con.execute("""
-                INSERT INTO trip_history
-                (vehicle_id,plate,driver_name,
-                 start_time,end_time,
-                 duration_minutes,work_content,km_travel)
-                VALUES (?,?,?,?,?,?,?,?)
-            """,(
-                trip["id"],
-                trip["plate"],
-                driver["name"],
-                trip["start_time"],
-                end_time,
-                duration_minutes,
-                trip["work_content"],
-                km
-            ))
-
-            new_km = (trip["km"] or 0) + km
-
-            con.execute("""
-                UPDATE vehicles
-                SET km=?,
-                    status=0,
-                    driver_id=NULL,
-                    start_time=NULL,
-                    end_time=NULL,
-                    work_content=NULL
-                WHERE id=?
-            """,(new_km,trip["id"]))
-
-            con.commit()
-
-            send_telegram(
-                chat_id,
-                f"""✅ ĐÃ HOÀN THÀNH CHUYẾN
-
-🚗 Xe: {trip['plate']}
-🛣 KM: {km} km
-⏱ Thời gian chạy: {duration_minutes} phút
-"""
-            )
-
-            con.close()
-            return "OK"
-
-
 
         # =================================
         # KHÔNG NHẬN DIỆN LỆNH
@@ -2379,9 +2191,10 @@ Vui lòng thực hiện theo phân công.
         send_telegram(
             chat_id,
             "📱 Lệnh hỗ trợ:\n"
-            "ketnoi 0905xxxx\n"
-            "nhan\n"
-            "xong 35"
+            "/dsxe\n"
+            "/dsxeranh\n"
+            "/taixeranh\n"
+            "ketnoi 0905xxxx"
         )
 
         con.close()
@@ -2393,6 +2206,9 @@ Vui lòng thực hiện theo phân công.
         print("Telegram webhook error:",e)
 
         return "OK"
+
+
+
 # =========================
 # ZALO CHO TAI XE (ĐÃ TỐI ƯU HÓA)
 # =========================
@@ -2459,9 +2275,13 @@ def send_telegram(chat_id, message):
 
         print("Telegram error:", e)
         return False
+
+@app.route("/ping")
+def ping():
+    return "OK"
 # =========================
 # CHẠY APP
 # =========================
 if __name__ == "__main__":
-     app.run(host="0.0.0.0", port=5000, debug=True)
-    
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port, debug=False)
