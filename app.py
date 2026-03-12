@@ -2244,51 +2244,8 @@ Nội dung: {work_content}
 
             con.close()
             return "OK"
-            if text.startswith("/xe"):
-
-    parts = text.split(" ")
-
-    if len(parts) < 2:
-        send_telegram(chat_id,"⚠️ Cú pháp: /xe 94A-001.88")
-        con.close()
-        return "OK"
-
-    plate = parts[1].upper()
-
-    vehicle = con.execute("""
-        SELECT v.plate, v.status, d.name
-        FROM vehicles v
-        LEFT JOIN drivers d ON v.driver_id=d.id
-        WHERE v.plate=?
-    """,(plate,)).fetchone()
-
-    if not vehicle:
-        send_telegram(chat_id,"❌ Không tìm thấy xe")
-        con.close()
-        return "OK"
-
-    if vehicle["status"] == 1:
-
-        msg = f"""
-🚗 XE ĐANG HOẠT ĐỘNG
-
-Xe: {vehicle['plate']}
-Tài xế: {vehicle['name']}
-"""
-
-    else:
-
-        msg = f"""
-🚗 XE ĐANG RÃNH
-
-Xe: {vehicle['plate']}
-"""
-
-    send_telegram(chat_id,msg)
-
-    con.close()
-    return "OK"
-
+            
+    
     if text == "/taixe":
 
     rows = con.execute("""
@@ -2349,7 +2306,57 @@ Xe: {vehicle['plate']}
 
     con.close()
     return "OK"
-          # =================================
+
+# =================================
+# XEM TRẠNG THÁI XE
+# =================================
+
+if text.startswith("/xe"):
+
+    parts = text.split(" ")
+
+    if len(parts) < 2:
+        send_telegram(chat_id,"⚠️ Cú pháp: /xe 94A-001.88")
+        con.close()
+        return "OK"
+
+    plate = parts[1].upper()
+
+    vehicle = con.execute("""
+        SELECT v.plate, v.status, d.name
+        FROM vehicles v
+        LEFT JOIN drivers d ON v.driver_id=d.id
+        WHERE v.plate=?
+    """,(plate,)).fetchone()
+
+    if not vehicle:
+        send_telegram(chat_id,"❌ Không tìm thấy xe")
+        con.close()
+        return "OK"
+
+    if vehicle["status"] == 1:
+
+        msg = f"""
+🚗 XE ĐANG HOẠT ĐỘNG
+
+Xe: {vehicle['plate']}
+Tài xế: {vehicle['name']}
+"""
+
+    else:
+
+        msg = f"""
+🚗 XE ĐANG RÃNH
+
+Xe: {vehicle['plate']}
+"""
+
+    send_telegram(chat_id,msg)
+
+    con.close()
+    return "OK"
+
+# =================================
 # AI ĐIỀU XE TIẾNG VIỆT
 # =================================
 
@@ -2617,3 +2624,4 @@ if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
 
     app.run(host="0.0.0.0", port=port, debug=False)
+
