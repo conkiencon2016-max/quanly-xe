@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: dieuxe-system
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
