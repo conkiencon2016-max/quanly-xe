@@ -14,7 +14,68 @@ import io
 from zalo_service import handle_message
 from io import BytesIO
 from collections import defaultdict
+import re
 
+def ai_parse_command(text):
+
+    text = text.lower()
+
+    result = {
+        "intent": None,
+        "plate": None,
+        "phone": None,
+        "content": None
+    }
+
+    # ======================
+    # điều xe
+    # ======================
+    if "điều xe" in text or "dieu xe" in text:
+
+        result["intent"] = "dieuxe"
+
+        plate = re.search(r"\d{2}[a-z]-\d{3}\.\d{2}", text)
+        phone = re.search(r"\d{9,11}", text)
+
+        if plate:
+            result["plate"] = plate.group().upper()
+
+        if phone:
+            result["phone"] = phone.group()
+
+        # nội dung sau chữ "đi"
+        if "đi" in text:
+            content = text.split("đi",1)[1]
+            result["content"] = content.strip()
+
+    # ======================
+    # xem xe
+    # ======================
+    if text.startswith("xe "):
+
+        result["intent"] = "xe"
+
+        plate = re.search(r"\d{2}[a-z]-\d{3}\.\d{2}", text)
+
+        if plate:
+            result["plate"] = plate.group().upper()
+
+    # ======================
+    # tài xế
+    # ======================
+    if "tài xế" in text or "taixe" in text:
+
+        if "rảnh" in text:
+            result["intent"] = "taixeranh"
+
+    # ======================
+    # thống kê
+    # ======================
+    if "thống kê" in text or "thong ke" in text:
+
+        result["intent"] = "thongke"
+
+    return result
 # =========================
 # INIT APP
 # =========================
@@ -1912,7 +1973,7 @@ def telegram_webhook():
 
         chat_id = message["chat"]["id"]
         text = message["text"].strip().lower()
-
+        ai = ai_parse_command(text)
         print("Telegram chat_id:", chat_id)
         print("Raw text:", text)
 
@@ -2183,7 +2244,232 @@ Nội dung: {work_content}
 
             con.close()
             return "OK"
+            if text.startswith("/xe"):
 
+    parts = text.split(" ")
+
+    if len(parts) < 2:
+        send_telegram(chat_id,"⚠️ Cú pháp: /xe 94A-001.88")
+        con.close()
+        return "OK"
+
+    plate = parts[1].upper()
+
+    vehicle = con.execute("""
+        SELECT v.plate, v.status, d.name
+        FROM vehicles v
+        LEFT JOIN drivers d ON v.driver_id=d.id
+        WHERE v.plate=?
+    """,(plate,)).fetchone()
+
+    if not vehicle:
+        send_telegram(chat_id,"❌ Không tìm thấy xe")
+        con.close()
+        return "OK"
+
+    if vehicle["status"] == 1:
+
+        msg = f"""
+🚗 XE ĐANG HOẠT ĐỘNG
+
+Xe: {vehicle['plate']}
+Tài xế: {vehicle['name']}
+"""
+
+    else:
+
+        msg = f"""
+🚗 XE ĐANG RÃNH
+
+Xe: {vehicle['plate']}
+"""
+
+    send_telegram(chat_id,msg)
+
+    con.close()
+    return "OK"
+
+    if text == "/taixe":
+
+    rows = con.execute("""
+        SELECT d.name, v.plate
+        FROM drivers d
+        LEFT JOIN vehicles v
+        ON v.driver_id=d.id AND v.status=1
+    """).fetchall()
+
+    msg = "👨‍✈️ TÀI XẾ\n\n"
+
+    for r in rows:
+
+        if r["plate"]:
+            msg += f"{r['name']} → 🚗 {r['plate']}\n"
+        else:
+            msg += f"{r['name']} → rảnh\n"
+
+    send_telegram(chat_id,msg)
+
+    con.close()
+    return "OK"
+
+    if text == "/thongke":
+
+    xe_chay = con.execute("""
+        SELECT COUNT(*)
+        FROM vehicles
+        WHERE status=1
+    """).fetchone()[0]
+
+    xe_ranh = con.execute("""
+        SELECT COUNT(*)
+        FROM vehicles
+        WHERE status=0
+    """).fetchone()[0]
+
+    taixe_ranh = con.execute("""
+        SELECT COUNT(*)
+        FROM drivers
+        WHERE id NOT IN (
+            SELECT driver_id
+            FROM vehicles
+            WHERE status=1 AND driver_id IS NOT NULL
+        )
+    """).fetchone()[0]
+
+    msg = f"""
+📊 THỐNG KÊ HỆ THỐNG
+
+🚗 Xe đang chạy: {xe_chay}
+🚗 Xe rảnh: {xe_ranh}
+
+👨‍✈️ Tài xế rảnh: {taixe_ranh}
+"""
+
+    send_telegram(chat_id,msg)
+
+    con.close()
+    return "OK"
+          # =================================
+# AI ĐIỀU XE TIẾNG VIỆT
+# =================================
+
+if ai["intent"] == "dieuxe":
+
+    if not is_admin:
+
+        send_telegram(chat_id,"❌ Bạn không có quyền điều xe")
+        con.close()
+        return "OK"
+
+    plate = ai["plate"]
+    phone = ai["phone"]
+    content = ai["content"]
+
+    if not plate or not phone:
+
+        send_telegram(
+            chat_id,
+            "⚠️ Ví dụ:\n"
+            "điều xe 94A-001.88 cho 0905086253 đi công tác"
+        )
+
+        con.close()
+        return "OK"
+
+    vehicle = con.execute("""
+        SELECT *
+        FROM vehicles
+        WHERE plate=?
+    """,(plate,)).fetchone()
+
+    if not vehicle:
+
+        send_telegram(chat_id,"❌ Không tìm thấy xe")
+        con.close()
+        return "OK"
+
+    if vehicle["status"] == 1:
+
+        send_telegram(chat_id,"⚠️ Xe đang hoạt động")
+        con.close()
+        return "OK"
+
+    driver = con.execute("""
+        SELECT *
+        FROM drivers
+        WHERE phone=?
+    """,(phone,)).fetchone()
+
+    if not driver:
+
+        send_telegram(chat_id,"❌ Không tìm thấy tài xế")
+        con.close()
+        return "OK"
+
+    start_time = datetime.now().isoformat()
+
+    con.execute("""
+        UPDATE vehicles
+        SET status=1,
+            driver_id=?,
+            start_time=?,
+            work_content=?
+        WHERE id=?
+    """,(driver["id"],start_time,content,vehicle["id"]))
+
+    con.commit()
+
+    send_telegram(
+        chat_id,
+        f"""🤖 AI ĐÃ ĐIỀU XE
+
+Xe: {plate}
+Tài xế: {driver['name']}
+Nội dung: {content}
+"""
+    )
+
+    con.close()
+    return "OK"
+
+    if ai["intent"] == "xe":
+
+    plate = ai["plate"]
+
+    vehicle = con.execute("""
+        SELECT v.plate,v.status,d.name
+        FROM vehicles v
+        LEFT JOIN drivers d ON v.driver_id=d.id
+        WHERE v.plate=?
+    """,(plate,)).fetchone()
+
+    if not vehicle:
+
+        send_telegram(chat_id,"❌ Không tìm thấy xe")
+        con.close()
+        return "OK"
+
+    if vehicle["status"] == 1:
+
+        msg = f"""
+🚗 XE ĐANG CHẠY
+
+Xe: {vehicle['plate']}
+Tài xế: {vehicle['name']}
+"""
+
+    else:
+
+        msg = f"""
+🚗 XE ĐANG RÃNH
+
+Xe: {vehicle['plate']}
+"""
+
+    send_telegram(chat_id,msg)
+
+    con.close()
+    return "OK"
         # =================================
         # KHÔNG NHẬN DIỆN LỆNH
         # =================================
@@ -2194,6 +2480,9 @@ Nội dung: {work_content}
             "/dsxe\n"
             "/dsxeranh\n"
             "/taixeranh\n"
+            "/xe 94A-001.88\n"
+            "/taixe\n"
+            "/thongke\n"
             "ketnoi 0905xxxx"
         )
 
@@ -2275,6 +2564,48 @@ def send_telegram(chat_id, message):
 
         print("Telegram error:", e)
         return False
+# =========================
+# Dashboard realtime xe đang chạy
+# =========================
+@app.route("/dashboard-data")
+def dashboard_data():
+
+    con = db()
+
+    rows = con.execute("""
+        SELECT v.plate, d.name, v.work_content, v.start_time
+        FROM vehicles v
+        LEFT JOIN drivers d ON v.driver_id = d.id
+        WHERE v.status = 1
+    """).fetchall()
+
+    data = []
+
+    for r in rows:
+        data.append({
+            "xe": r["plate"],
+            "taixe": r["name"],
+            "noidung": r["work_content"],
+            "start": r["start_time"]
+        })
+
+    con.close()
+
+    return {"data": data}
+# =========================
+# sao lưu dữ liệu
+# =========================
+@app.route("/backup")
+def backup():
+
+    return send_file(
+        "fleet.db",
+        as_attachment=True,
+        download_name="fleet_backup.db"
+    )
+# =========================
+# chống ngủ server
+# =========================
 
 @app.route("/ping")
 def ping():
@@ -2284,4 +2615,5 @@ def ping():
 # =========================
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
+
     app.run(host="0.0.0.0", port=port, debug=False)
