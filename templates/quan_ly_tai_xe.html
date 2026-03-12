@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Quản lý tài xế</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<link rel="stylesheet" href="/static/style.css"></head>
+
+<body>
+<div class="overlay">
+
+<a href="/" class="back-link">⬅ Trang chủ</a>
+
+<div class="header">
+    <h2>QUẢN LÝ TÀI XẾ</h2>
+</div>
+
+<!-- THÊM TÀI XẾ -->
+<div class="card">
+<form method="post">
+<div class="form-grid">
+
+    <div class="form-group">
+        <label>Họ và tên</label>
+        <input type="text" name="name" placeholder="Nguyễn Văn A" required>
+    </div>
+
+    <div class="form-group">
+    <label>Số điện thoại</label>
+    <input type="text" name="phone">
+</div>
+
+<div class="form-group">
+    <label>Địa chỉ</label>
+    <input type="text" name="address">
+</div>
+<div class="form-group">
+    <label>Zalo User ID</label>
+    <input type="text" name="zalo_user_id">
+</div>
+ 
+    <button class="btn-add" type="submit">➕ Thêm tài xế</button>
+
+</div>
+</form>
+</div>
+
+<!-- DANH SÁCH TÀI XẾ -->
+<div class="card">
+
+<table>
+<tr>
+    <th>STT</th>
+    <th>Họ tên</th>
+    <th>Số điện thoại</th>
+    <th>Địa chỉ</th>
+    <th>Địa chỉ Zalo</th>
+    <th>Trạng thái</th>
+    <th>Thao tác</th>
+</tr>
+
+<!-- HIỂN THỊ TÀI XẾ -->
+{% for d in drivers %}
+<tr class="{% if d.is_busy == 1 %}row-busy{% else %}row-free{% endif %}">
+    <td>{{ loop.index }}</td>
+    <td>{{ d.name }}</td>
+    <td>{{ d.phone or "" }}</td>
+    <td>{{ d.address or "" }}</td>
+    <td>
+{% if d.zalo_user_id %}
+    <span style="color:#16A34A;font-weight:600;">
+        ✔ Đã cấu hình
+    </span>
+{% else %}
+    <span style="color:#DC2626;font-weight:600;">
+        ✖ Chưa cấu hình
+    </span>
+{% endif %}
+</td>
+    <td>
+        {% if d.is_busy == 1 %}
+            <span class="status-on">🟢 Đang công tác</span>
+        {% else %}
+            <span class="status-off">⚪ Rảnh</span>
+        {% endif %}
+    </td>
+
+    <td>
+    <a href="/sua-tai-xe/{{ d.id }}" class="action-btn btn-edit">Sửa</a>
+
+    <a href="/xoa-tai-xe/{{ d.id }}"
+       onclick="return confirm('Xóa tài xế này?')"
+       class="action-btn btn-del">Xóa</a>
+</td>
+</tr>
+{% endfor %}
+
+</table>
+
+</div>
+
+</div>
+</body>
+</html>

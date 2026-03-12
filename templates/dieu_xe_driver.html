@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Điều xe - Tài xế</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+<div class="overlay">
+
+<div class="header">
+    <h2>XE ĐANG CÔNG TÁC</h2>
+    <p style="text-align:center; font-weight:600;">
+        Tài xế: {{ driver_name }}
+    </p>
+</div>
+
+<div class="card">
+
+{% if vehicle %}
+
+<table>
+<tr>
+    <th>Biển số</th>
+    <th>Ngày đi</th>
+    <th>Nội dung</th>
+    <th>KM đã chạy</th>
+    <th>Thao tác</th>
+</tr>
+
+<tr>
+    <td>{{ vehicle.plate }}</td>
+
+    <td>
+        {{ vehicle.start_time[:16].replace("T"," ") }}
+    </td>
+
+    <td style="text-align:left;">
+        {{ vehicle.work_content }}
+    </td>
+
+    <td>
+        <form method="post" action="/stop-driver/{{ vehicle.id }}">
+            <input type="number"
+                   name="km_travel"
+                   placeholder="Nhập KM"
+                   min="0"
+                   required
+                   style="width:100px; padding:6px;">
+    </td>
+
+    <td>
+            <input type="datetime-local"
+                   name="end_time"
+                   required
+                   style="margin-bottom:6px;">
+
+            <br>
+
+            <button class="btn-stop" type="submit">
+                Kết thúc
+            </button>
+        </form>
+    </td>
+</tr>
+</table>
+
+{% else %}
+
+<div style="text-align:center; padding:30px; font-weight:600;">
+    🚗 Hiện tại bạn không có xe đang công tác
+</div>
+
+{% endif %}
+
+</div>
+
+<div class="top-bar">
+    <a href="/logout" class="btn-back">Đăng xuất</a>
+</div>
+
+</div>
+</body>
+</html>

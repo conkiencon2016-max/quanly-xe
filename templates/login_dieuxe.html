@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Đăng nhập Điều xe</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+body{
+    font-family:"Segoe UI",Arial;
+    background:#f1f5f9;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    height:100vh;
+}
+
+.card{
+    background:#fff;
+    padding:30px;
+    border-radius:16px;
+    width:360px;
+    box-shadow:0 10px 25px rgba(0,0,0,0.1);
+    text-align:center;
+}
+
+.logo{
+    width:100px;
+    margin-bottom:15px;
+}
+
+input{
+    width:100%;
+    padding:10px;
+    margin:10px 0;
+    border:1px solid #cbd5e1;
+    border-radius:8px;
+}
+
+button{
+    width:100%;
+    padding:10px;
+    background:#2563EB;
+    color:#fff;
+    border:none;
+    border-radius:8px;
+    font-weight:600;
+}
+</style>
+</head>
+<body>
+
+<div class="card">
+    <img src="/static/LOGO_DIEUXE.png" class="logo">
+    <h3>HỆ THỐNG ĐIỀU XE</h3>
+
+    <form method="post">
+    <input type="text" name="username" placeholder="Tên đăng nhập" required>
+    <input type="password" name="password" placeholder="Mật khẩu" required>
+    <button type="submit">Đăng nhập</button>
+</form>
+</div>
+
+</body>
+</html>

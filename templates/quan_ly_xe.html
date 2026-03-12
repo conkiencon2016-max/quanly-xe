@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Quản lý xe</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+<div class="overlay">
+
+<a href="/quan-ly-xe-menu" class="back-link">⬅ Quản lý phương tiện</a>
+
+<div class="header">
+    <h2>QUẢN LÝ XE</h2>
+</div>
+<!-- ===== DASHBOARD ===== -->
+<div class="dashboard">
+
+    <!-- Tổng số xe -->
+    <div class="dash-box dash-total
+         {% if not filter_type %}selected{% endif %}"
+         onclick="location.href='/quan-ly-xe'">
+        <div class="dash-title">Tổng số xe</div>
+        <div class="dash-number">{{ tong_xe }}</div>
+        <div class="dash-icon">🚗</div>
+    </div>
+
+    <!-- Xe quá hạn bảo dưỡng -->
+    <div class="dash-box dash-active
+         {% if filter_type == 'bao_duong' %}selected{% endif %}"
+         onclick="location.href='/quan-ly-xe?filter=bao_duong'">
+        <div class="dash-title">Xe quá hạn bảo dưỡng</div>
+        <div class="dash-number">{{ qua_han_bd }}</div>
+        <div class="dash-icon">🔧</div>
+    </div>
+
+    <!-- Xe quá hạn đăng kiểm -->
+    <div class="dash-box dash-home
+         {% if filter_type == 'dang_kiem' %}selected{% endif %}"
+         onclick="location.href='/quan-ly-xe?filter=dang_kiem'">
+        <div class="dash-title">Xe quá hạn đăng kiểm</div>
+        <div class="dash-number">{{ qua_han_dk }}</div>
+        <div class="dash-icon">📄</div>
+    </div>
+
+</div>
+<!-- THÊM XE -->
+<div class="card">
+<form method="post">
+<div class="form-grid">
+
+    <div class="form-group">
+        <label>Biển số xe</label>
+        <input type="text" name="plate" placeholder="30A-12345" required>
+    </div>
+
+    <div class="form-group">
+        <label>Hãng xe</label>
+        <input type="text" name="brand" placeholder="Toyota">
+    </div>
+
+    <div class="form-group">
+        <label>Năm mua xe</label>
+        <input type="number" name="year" placeholder="2020">
+    </div>
+
+    <div class="form-group">
+        <label>Số km đã sử dụng</label>
+        <input type="number" name="km" placeholder="50000">
+    </div>
+    <div class="form-group">
+    <label>Ngày hết hạn đăng kiểm</label>
+    <input type="date" name="ngay_het_han_dang_kiem">
+</div>
+    <div class="form-group">
+        <label>Định mức nhiên liệu (l/100km)</label>
+        <input type="number" step="0.1" name="fuel_norm" placeholder="8.5">
+    </div>
+
+    <button class="btn-add" type="submit">➕ Thêm xe</button>
+
+</div>
+</form>
+</div>
+
+<!-- DANH SÁCH XE -->
+<div class="card">
+
+<table>
+<tr>
+    <th>STT</th>
+    <th>Xe</th>
+    <th>Hãng</th>
+    <th>Năm</th>
+    <th>KM hiện tại</th>
+    <th>KM lần BD gần nhất</th>
+    <th>KM đã đi</th>
+    <th>Mốc BD</th>
+    <th>Cảnh báo BD</th>
+    <th>Hết hạn đăng kiểm</th>
+    <th>Cảnh báo ĐK</th>
+    <th>Thao tác</th>
+</tr>
+
+{% for v in vehicles %}
+<tr>
+    <td>{{ loop.index }}</td>
+    <td>{{ v.plate }}</td>
+    <td>{{ v.brand }}</td>
+    <td>{{ v.year }}</td>
+
+    <!-- KM hiện tại -->
+    <td>{{ "{:,.0f}".format(v.km or 0) }}</td>
+
+    <!-- KM lần bảo dưỡng gần nhất -->
+    <td>{{ "{:,.0f}".format(v.last_maintenance_km or 0) }}</td>
+
+    <!-- KM đã đi từ lần bảo dưỡng -->
+    {% set da_di = (v.km or 0) - (v.last_maintenance_km or 0) %}
+    <td>{{ "{:,.0f}".format(da_di) }}</td>
+
+    <!-- Mốc bảo dưỡng -->
+    <td>{{ "{:,.0f}".format(v.maintenance_cycle or 5000) }} km</td>
+
+    <!-- CẢNH BÁO Bảo dưỡng -->
+    <td>
+        {% if da_di >= (v.maintenance_cycle or 5000) %}
+            <span style="color:red;font-weight:600;">
+                🔴 Đến hạn
+            </span>
+        {% elif da_di >= (v.maintenance_cycle or 5000) - 500 %}
+            <span style="color:#F59E0B;font-weight:600;">
+                🟡 Sắp đến hạn
+            </span>
+        {% else %}
+            <span style="color:#16A34A;">
+                🟢 Bình thường
+            </span>
+        {% endif %}
+    </td>
+    <td>{{ v.ngay_het_han_dang_kiem or "-" }}</td>
+
+<td>
+{% if v.canh_bao_dk == "expired" %}
+    <span style="color:red;font-weight:600">
+        🔴 Quá hạn
+    </span>
+{% elif v.canh_bao_dk == "warning" %}
+    <span style="color:#F59E0B;font-weight:600">
+        🟡 Sắp hết hạn
+    </span>
+{% else %}
+    <span style="color:green;font-weight:600">
+        🟢 Còn hiệu lực
+    </span>
+{% endif %}
+</td>
+    <td>
+        <a href="/sua-xe/{{ v.id }}" class="action-btn btn-edit">Sửa</a>
+        <a href="/xoa-xe/{{ v.id }}"
+           onclick="return confirm('Xóa xe này?')"
+           class="action-btn btn-del">Xóa</a>
+    </td>
+</tr>
+{% endfor %}
+</table>
+</div>
+
+</div>
+</body>
+</html>

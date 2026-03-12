@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Lịch sử bảo dưỡng</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+<div class="overlay">
+
+<a href="/quan-ly-xe-menu" class="back-link">⬅ Quản lý phương tiện</a>
+
+<div class="header">
+    <h2>LỊCH SỬ BẢO DƯỠNG</h2>
+</div>
+
+<div class="card">
+
+<form method="get">
+<div class="filter-bar">
+
+    <div class="filter-group">
+        <label>Tìm kiếm</label>
+        <input type="text" name="search"
+               placeholder="Biển số, nội dung, đơn vị...">
+    </div>
+
+    <div class="filter-group">
+        <label>Từ ngày</label>
+        <input type="date" name="tu_ngay">
+    </div>
+
+    <div class="filter-group">
+        <label>Đến ngày</label>
+        <input type="date" name="den_ngay">
+    </div>
+
+    <div class="filter-group">
+        <label>Trạng thái</label>
+        <select name="status">
+            <option value="">Tất cả</option>
+            <option value="hoan_thanh">Đã hoàn thành</option>
+            <option value="dang_bao_duong">Đang bảo dưỡng</option>
+        </select>
+    </div>
+
+    <button type="submit" class="filter-btn">
+    🔍 Lọc
+</button>
+
+<button type="submit"
+        name="export"
+        value="excel"
+        class="excel-btn">
+    📥 Xuất Excel
+</button>
+
+<a href="/them-bao-duong" class="btn-add">
+    ➕ Thêm bảo dưỡng
+</a>
+
+</div>
+</form>
+
+</div>
+
+<div class="card">
+
+<table>
+<thead>
+<tr>
+    <th>#</th>
+    <th>Biển số</th>
+    <th>Loại bảo dưỡng</th>
+    <th>Nội dung</th>
+    <th>Ngày thực hiện</th>
+    <th>Ngày hoàn thành</th>
+    <th>Trạng thái</th>
+    <th>Đơn vị bảo dưỡng</th>
+    <th>Chi phí (VNĐ)</th>
+    <th>KM tại thời điểm BD</th>
+    <th>Ghi chú</th>
+    <th>Thao tác</th>
+</tr>
+</thead>
+
+<tbody>
+
+{% for r in danh_sach %}
+<tr>
+    <td>{{ loop.index }}</td>
+    <td>{{ r.plate }}</td>
+    <td>{{ r.loai }}</td>
+    <td>{{ r.noi_dung }}</td>
+    <td>{{ r.ngay_thuc_hien }}</td>
+    <td>{{ r.ngay_hoan_thanh or "-" }}</td>
+
+    <td>
+        {% if r.trang_thai == "hoan_thanh" %}
+            <span class="status-on">🟢 Đã hoàn thành</span>
+        {% else %}
+            <span style="color:#2563EB;font-weight:600;">🔵 Đang bảo dưỡng</span>
+        {% endif %}
+    </td>
+
+    <td>{{ r.don_vi }}</td>
+    <td>
+    {% if r.chi_phi %}
+        {{ "{:,.0f}".format(r.chi_phi) }}
+    {% else %}
+        -
+    {% endif %}
+</td>
+    <td>{{ r.km_tai_thoi_diem or "-" }}</td>
+    <td>{{ r.ghi_chu or "-" }}</td>
+<td>
+    <a href="/sua-bao-duong/{{ r.id }}" class="btn-edit">✏️ Sửa</a>
+
+    <a href="/xoa-bao-duong/{{ r.id }}"
+       class="btn-delete"
+       onclick="return confirm('Xác nhận xóa dữ liệu này?')">
+       🗑️ Xóa
+    </a>
+</td>
+</tr>
+{% endfor %}
+
+</tbody>
+
+</table>
+
+</div>
+
+</div>
+</body>
+</html>

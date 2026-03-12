@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Thống kê điều xe</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<link rel="stylesheet" href="/static/style.css"></head>
+
+<body>
+<div class="overlay">
+
+<a href="/" class="back-link">⬅ Trang chủ</a>
+
+<div class="header">
+    <h1>THỐNG KÊ ĐIỀU XE</h1>
+</div>
+
+<form method="get">
+<div class="card">
+<h3>Bộ lọc tìm kiếm</h3>
+
+<div class="filter-bar">
+    <div class="filter-group">
+        <label>Từ ngày</label>
+        <input type="date" name="tu_ngay" value="{{ tu_ngay }}">
+    </div>
+
+    <div class="filter-group">
+        <label>Đến ngày</label>
+        <input type="date" name="den_ngay" value="{{ den_ngay }}">
+    </div>
+
+    <div class="filter-group">
+        <label>Xe</label>
+        <select name="xe">
+            <option value="">-- Tất cả --</option>
+            {% for x in danh_sach_xe %}
+            <option value="{{ x.plate }}" {% if x.plate==xe %}selected{% endif %}>
+                {{ x.plate }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="filter-group">
+        <label>Tài xế</label>
+        <select name="taixe">
+            <option value="">-- Tất cả --</option>
+            {% for t in danh_sach_taixe %}
+            <option value="{{ t.driver_name }}" {% if t.driver_name==taixe %}selected{% endif %}>
+                {{ t.driver_name }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <button class="filter-btn" type="submit">🔍 Xem</button>
+</div>
+
+</div>
+</form>
+
+<div class="card">
+<h3>Kết quả</h3>
+{% if not co_dieu_kien %}
+<p style="color:#475569">Vui lòng chọn ít nhất một điều kiện để xem thống kê.</p>
+
+{% elif ket_qua %}
+<table>
+<tr>
+<th>Xe</th>
+<th>Tháng</th>
+<th>Tổng KM</th>
+</tr>
+
+{% for r in data %}
+<tr>
+<td>{{ r.plate }}</td>
+<td>{{ r.thang }}</td>
+<td>{{ "{:,.0f}".format(r.tong_km or 0) }}</td>
+</tr>
+{% endfor %}
+</table>{% else %}
+<p>Không có dữ liệu phù hợp.</p>
+{% endif %}
+</div>
+
+</div>
+</body>
+</html>

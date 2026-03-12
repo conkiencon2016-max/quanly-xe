@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Thêm đăng kiểm</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+<div class="overlay">
+
+<a href="/lich-su-dang-kiem" class="back-link">⬅ Quay lại</a>
+
+<div class="header">
+    <h2>THÊM ĐĂNG KIỂM</h2>
+</div>
+
+<div class="card">
+
+<form method="post">
+
+<div class="form-grid">
+
+<div class="form-group">
+<label>Xe</label>
+<select name="vehicle_id" required>
+    {% for v in vehicles %}
+    <option value="{{ v.id }}">{{ v.plate }}</option>
+    {% endfor %}
+</select>
+</div>
+
+<div class="form-group">
+<label>Số đăng ký</label>
+<input type="text" name="so_dang_ky" required>
+</div>
+
+<div class="form-group">
+<label>Loại</label>
+<select name="loai">
+    <option value="Định kỳ">Định kỳ</option>
+    <option value="Lần đầu">Lần đầu</option>
+</select>
+</div>
+
+<div class="form-group">
+<label>Ngày đăng ký</label>
+<input type="date" name="ngay_dang_ky" required>
+</div>
+
+<div class="form-group">
+<label>Ngày hết hạn</label>
+<input type="date" name="ngay_het_han" required>
+</div>
+<div class="form-group">
+<label>Chi phí (VNĐ)</label>
+<input type="number" name="chi_phi" min="0" step="1000">
+</div>
+<div class="form-group">
+<label>Người thực hiện</label>
+<input type="text" name="nguoi_thuc_hien">
+</div>
+<div class="form-group">
+<label>Trung tâm đăng kiểm</label>
+<input type="text" name="trung_tam">
+</div>
+<div class="form-group">
+<label>Ghi chú</label>
+<input type="text" name="ghi_chu">
+</div>
+<button class="btn-add" type="submit">💾 Lưu</button>
+
+</div>
+
+</form>
+
+</div>
+
+</div>
+</body>
+</html>

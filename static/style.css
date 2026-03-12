@@ -1,0 +1,401 @@
+/* ===============================
+   SYSTEM UI - FLEET MANAGEMENT
+================================ */
+
+:root{
+    --primary:#2563EB;
+    --primary-light:#3B82F6;
+    --danger:#DC2626;
+    --warning:#F59E0B;
+    --success:#059669;
+    --gray:#64748B;
+    --border:rgba(0,0,0,0.08);
+    --card-bg:rgba(255,255,255,0.65);
+}
+
+/* RESET */
+*{ box-sizing:border-box; }
+
+body{
+    font-family:"Segoe UI",Arial,sans-serif;
+    background-image:url("/static/10.jpg");
+    background-size:cover;
+    background-attachment:fixed;
+    margin:0;
+    color:#1F2937;
+}
+
+.overlay{
+    padding:25px 35px;
+}
+
+/* HEADER */
+.header{
+    background:linear-gradient(90deg,#2C7BE5 0%,#5AA9F7 45%,#DCEEFF 100%);
+    border-radius:14px;
+    padding:16px;
+    text-align:center;
+    margin-bottom:18px;
+}
+
+.header h1,
+.header h2{
+    margin:0;
+    color:#fff;
+    letter-spacing:1px;
+}
+
+/* CARD */
+.card{
+    background:var(--card-bg);
+    backdrop-filter:blur(12px);
+    border-radius:16px;
+    padding:18px;
+    margin-bottom:15px;
+}
+
+/* LINK */
+.back-link{
+    color:#1E40AF;
+    font-weight:600;
+    text-decoration:none;
+    display:inline-block;
+    margin-bottom:10px;
+}
+
+/* ===============================
+   FORM
+================================ */
+
+.form-grid,
+.filter-bar{
+    display:grid;
+    gap:15px;
+    align-items:end;
+}
+
+.form-grid{
+    grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+}
+
+.filter-bar{
+    grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+}
+
+.form-group,
+.filter-group{
+    display:flex;
+    flex-direction:column;
+}
+
+label{
+    font-size:13px;
+    font-weight:600;
+    margin-bottom:5px;
+    color:#334155;
+}
+
+input, select{
+    height:38px;
+    padding:8px 10px;
+    font-size:14px;
+    border-radius:8px;
+    border:1px solid var(--border);
+    background:#fff;
+    transition:0.2s;
+}
+
+input:focus,
+select:focus{
+    outline:none;
+    border-color:var(--primary);
+    box-shadow:0 0 0 2px rgba(37,99,235,0.15);
+}
+
+.btn-add,
+.filter-btn{
+    height:38px;
+    padding:0 20px;
+    border:none;
+    border-radius:10px;
+    background:var(--primary);
+    color:#fff;
+    font-weight:600;
+    cursor:pointer;
+    transition:0.2s;
+}
+
+.btn-add:hover,
+.filter-btn:hover{
+    background:#1d4ed8;
+}
+.menu{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+    gap:20px;
+    max-width:1000px;
+    margin:auto;
+}
+
+/* ===============================
+   TABLE
+================================ */
+
+table{
+    width:100%;
+    border-collapse:separate;
+    border-spacing:0;
+    background:rgba(255,255,255,0.85);
+    border-radius:14px;
+    overflow:hidden;
+    table-layout:fixed;
+}
+
+th{
+    background:rgba(230,238,244,0.95);
+    padding:12px;
+    font-weight:600;
+    text-align:center;
+    border-bottom:1px solid var(--border);
+}
+
+td{
+    padding:12px;
+    text-align:center;
+    border-bottom:1px solid var(--border);
+    vertical-align:middle;
+    word-break:break-word;
+}
+
+/* Zebra */
+tbody tr:nth-child(even){
+    background:rgba(248,250,252,0.8);
+}
+
+/* Hover */
+tbody tr:hover{
+    background:rgba(37,99,235,0.15) !important;
+    transition:0.2s;
+}
+
+/* ===============================
+   STATUS
+================================ */
+
+.status-on{
+    color:var(--success);
+    font-weight:600;
+}
+
+.status-off{
+    color:var(--gray);
+    font-weight:600;
+}
+
+.row-busy{
+    background:rgba(16,185,129,0.10);
+}
+
+.row-free{
+    background:rgba(148,163,184,0.08);
+}
+
+/* ===============================
+   ACTION BUTTON
+================================ */
+
+.action-btn{
+    padding:6px 12px;
+    font-size:13px;
+    border-radius:8px;
+    border:none;
+    cursor:pointer;
+    text-decoration:none;
+    font-weight:600;
+    display:inline-block;
+    transition:0.2s;
+}
+
+.btn-edit{
+    background:var(--warning);
+    color:#fff;
+}
+
+.btn-edit:hover{
+    background:#d97706;
+}
+
+.btn-del{
+    background:var(--danger);
+    color:#fff;
+}
+
+.btn-del:hover{
+    background:#b91c1c;
+}
+
+/* ===============================
+   RESPONSIVE
+================================ */
+
+@media (max-width:768px){
+    .overlay{ padding:15px; }
+    table{ font-size:13px; }
+}
+
+.dashboard {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px,1fr));
+    gap: 18px;
+    margin-bottom: 20px;
+}
+
+.dash-box {
+    background: rgba(255,255,255,0.95);
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.08);
+    transition: 0.3s;
+    cursor: pointer;
+    position: relative;
+}
+
+.dash-box:hover {
+    transform: translateY(-4px);
+}
+
+.dash-title {
+    font-size: 14px;
+    color: #6B7280;
+}
+
+.dash-number {
+    font-size: 30px;
+    font-weight: 700;
+    margin-top: 6px;
+}
+
+.dash-total { border-left: 6px solid #2563EB; }
+.dash-active { border-left: 6px solid #DC2626; }
+.dash-home { border-left: 6px solid #F59E0B; }
+
+.selected {
+    transform: scale(1.05);
+    box-shadow: 0 8px 22px rgba(0,0,0,0.15);
+}
+/* ===== USER MENU TOP RIGHT ===== */
+.user-box {
+    position: fixed;
+    top: 18px;
+    right: 20px;
+    z-index: 1000;
+}
+
+.user-btn {
+    background: rgba(255,255,255,0.95);
+    padding: 8px 14px;
+    border-radius: 30px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+    border: 1px solid #ddd;
+}
+
+.user-dropdown {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: 45px;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 8px 18px rgba(0,0,0,0.15);
+    overflow: hidden;
+    min-width: 180px;
+}
+
+.user-dropdown a {
+    display: block;
+    padding: 10px 14px;
+    text-decoration: none;
+    color: #333;
+    font-size: 14px;
+}
+
+.user-dropdown a:hover {
+    background: #f3f4f6;
+}
+
+/* ===== LOGOUT MODAL ===== */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 2000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.4);
+}
+
+.modal-content {
+    background: white;
+    width: 320px;
+    padding: 24px;
+    border-radius: 12px;
+    text-align: center;
+    margin: 15% auto;
+    box-shadow: 0 12px 28px rgba(0,0,0,0.25);
+}
+
+.modal-content button {
+    margin: 8px;
+    padding: 8px 14px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.btn-confirm {
+    background: #DC2626;
+    color: white;
+}
+
+.btn-cancel {
+    background: #9CA3AF;
+    color: white;
+}
+
+.btn-edit {
+    background:#2563EB;
+    color:white;
+    padding:4px 8px;
+    border-radius:6px;
+    text-decoration:none;
+    font-size:13px;
+}
+
+.btn-delete {
+    background:#DC2626;
+    color:white;
+    padding:4px 8px;
+    border-radius:6px;
+    text-decoration:none;
+    font-size:13px;
+}
+/* ===== NÚT XUẤT EXCEL ===== */
+.excel-btn {
+    background: #059669;
+    color: white;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.excel-btn:hover {
+    background: #047857;
+}
+

@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Sửa thông tin xe</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+body{
+    font-family:"Segoe UI",Arial,sans-serif;
+    background-image:url("/static/10.jpg");
+    background-size:cover;
+    background-attachment:fixed;
+    margin:0;
+    color:#1F2933;
+}
+
+.overlay{
+    padding:30px;
+}
+
+/* CARD */
+.card{
+    max-width:800px;
+    margin:auto;
+    background:rgba(255,255,255,0.65);
+    backdrop-filter: blur(10px);
+    border-radius:16px;
+    padding:22px;
+}
+
+/* HEADER */
+.header{
+    background:linear-gradient(
+        90deg,
+        #2C7BE5 0%,
+        #5AA9F7 45%,
+        #DCEEFF 100%
+    );
+    border-radius:12px;
+    padding:12px;
+    text-align:center;
+    margin-bottom:18px;
+}
+
+.header h2{
+    margin:0;
+    color:#ffffff;
+    letter-spacing:1px;
+}
+
+/* FORM */
+.form-grid{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap:14px 18px;
+}
+
+.form-group{
+    display:flex;
+    flex-direction:column;
+}
+
+.form-group label{
+    font-size:13px;
+    font-weight:600;
+    margin-bottom:4px;
+    color:#1E3A5F;
+}
+
+.form-group input{
+    height:36px;
+    padding:6px 8px;
+    font-size:13px;
+    border-radius:6px;
+    border:1px solid rgba(0,0,0,0.25);
+    background:rgba(255,255,255,0.95);
+    box-sizing:border-box;
+}
+
+/* ACTIONS */
+.actions{
+    display:flex;
+    gap:14px;
+    margin-top:22px;
+}
+
+.btn-save{
+    flex:1;
+    background:#2563EB;
+    color:#fff;
+    border:none;
+    border-radius:8px;
+    height:40px;
+    font-weight:600;
+    cursor:pointer;
+}
+
+.btn-back{
+    flex:1;
+    background:#94A3B8;
+    color:#fff;
+    border:none;
+    border-radius:8px;
+    height:40px;
+    font-weight:600;
+    cursor:pointer;
+    text-align:center;
+    line-height:40px;
+    text-decoration:none;
+}
+
+.btn-save:hover{ background:#1D4ED8; }
+.btn-back:hover{ background:#64748B; }
+</style>
+</head>
+
+<body>
+<div class="overlay">
+
+<div class="card">
+
+<div class="header">
+    <h2>SỬA THÔNG TIN XE</h2>
+</div>
+
+<form method="post">
+
+<div class="form-grid">
+
+    <div class="form-group">
+        <label>Biển số xe</label>
+        <input type="text" name="plate" value="{{ vehicle.plate }}" required>
+    </div>
+
+    <div class="form-group">
+        <label>Hãng xe</label>
+        <input type="text" name="brand" value="{{ vehicle.brand }}">
+    </div>
+
+    <div class="form-group">
+        <label>Năm sản xuất</label>
+        <input type="number" name="year" value="{{ vehicle.year }}">
+    </div>
+
+    <div class="form-group">
+        <label>Số km hiện tại</label>
+        <input type="number" name="km" value="{{ vehicle.km }}">
+    </div>
+
+    <div class="form-group">
+        <label>Định mức nhiên liệu (l/100km)</label>
+        <input type="number" step="0.1" name="fuel_norm" value="{{ vehicle.fuel_norm }}">
+    </div>
+
+    <div class="form-group">
+        <label>KM lần bảo dưỡng gần nhất</label>
+        <input type="number" name="last_maintenance_km"
+               value="{{ vehicle.last_maintenance_km }}">
+    </div>
+
+    <div class="form-group">
+        <label>Chu kỳ bảo dưỡng (km)</label>
+        <input type="number" name="maintenance_cycle"
+               value="{{ vehicle.maintenance_cycle }}">
+    </div>
+
+    <div class="form-group">
+        <label>Ngày hết hạn đăng kiểm</label>
+        <input type="date" name="ngay_het_han_dang_kiem"
+               value="{{ vehicle.ngay_het_han_dang_kiem }}">
+    </div>
+
+</div>
+
+<div class="actions">
+    <button type="submit" class="btn-save">💾 Lưu thay đổi</button>
+    <a href="/quan-ly-xe" class="btn-back">↩ Quay lại</a>
+</div>
+
+</form>
+
+</div>
+</div>
+</body>
+</html>

@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Lịch sử đăng kiểm</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+<div class="overlay">
+
+<a href="/quan-ly-xe-menu" class="back-link">⬅ Quản lý phương tiện</a>
+
+<div class="header">
+    <h2>LỊCH SỬ ĐĂNG KIỂM</h2>
+</div>
+
+<div class="card">
+
+<form method="get">
+<div class="filter-bar">
+
+    <div class="filter-group">
+        <label>Tìm kiếm</label>
+        <input type="text" name="search"
+               placeholder="Biển số, số đăng ký, trung tâm...">
+    </div>
+
+    <div class="filter-group">
+        <label>Từ ngày</label>
+        <input type="date" name="tu_ngay">
+    </div>
+
+    <div class="filter-group">
+        <label>Đến ngày</label>
+        <input type="date" name="den_ngay">
+    </div>
+
+    <div class="filter-group">
+        <label>Trạng thái</label>
+        <select name="status">
+            <option value="">Tất cả</option>
+            <option value="con_han">Còn hạn</option>
+            <option value="sap_het">Sắp hết hạn</option>
+            <option value="het_han">Hết hạn</option>
+        </select>
+    </div>
+
+    <button type="submit" class="filter-btn">🔍 Lọc</button>
+<button type="submit"
+        name="export"
+        value="excel"
+        class="excel-btn">
+    📥 Xuất Excel
+</button>
+ <a href="/them-dang-kiem" class="btn-add">➕Thêm đăng kiểm</a>
+</div>
+</form>
+
+</div>
+
+<div class="card">
+
+<table>
+<thead>
+<tr>
+    <th>#</th>
+    <th>Biển số</th>
+    <th>Số đăng ký</th>
+    <th>Loại đăng kiểm</th>
+    <th>Ngày đăng ký</th>
+    <th>Ngày hết hạn</th>
+    <th>Trạng thái</th>
+    <th>Trung tâm đăng kiểm</th>
+    <th>Thao tác</th>
+</tr>
+</thead>
+
+<tbody>
+{% for r in danh_sach %}
+<tr>
+    <td>{{ loop.index }}</td>
+    <td>{{ r.plate }}</td>
+    <td>{{ r.so_dang_ky }}</td>
+    <td>{{ r.loai }}</td>
+    <td>{{ r.ngay_dang_ky }}</td>
+    <td>
+    {{ r.ngay_het_han }}
+    {% if r.so_ngay_con_lai is defined %}
+    <br>
+    <small style="color:#64748B">
+        ({{ r.so_ngay_con_lai }} ngày)
+    </small>
+    {% endif %}
+</td>
+
+    <td>
+    {% if r.trang_thai == "het_han" %}
+        <span style="color:red;font-weight:600">🔴 Hết hạn</span>
+    {% elif r.trang_thai == "sap_het" %}
+        <span style="color:#F59E0B;font-weight:600">🟡 Sắp hết hạn</span>
+    {% else %}
+        <span style="color:#16A34A;font-weight:600">🟢 Còn hiệu lực</span>
+    {% endif %}
+</td>
+
+    <td>{{ r.trung_tam }}</td>
+    <td>
+    <a href="/sua-dang-kiem/{{ r.id }}" class="btn-edit">✏️ Sửa</a>
+
+    <a href="/xoa-dang-kiem/{{ r.id }}"
+       class="btn-delete"
+       onclick="return confirm('Xác nhận xóa đăng kiểm này?')">
+       🗑️ Xóa
+    </a>
+</td>
+</tr>
+{% endfor %}
+</tbody>
+
+</table>
+
+</div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Quản lý điều xe</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+/* ===== HEADER ===== */
+header {
+    text-align: center;
+    padding: 16px;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.95);
+	
+    margin-bottom: 30px;
+    box-shadow: none;
+}
+
+header h1 {
+    margin: 0;
+    color: #B11226;          /* ĐỎ TRANG TRỌNG */
+    font-weight: 700;
+    letter-spacing: 0.6px;
+}
+
+header h2 {
+    margin: 6px 0 0 0;
+    font-size: 18px;
+    color: #7A1E1E;          /* Đỏ sẫm nhẹ */
+    font-weight: 600;
+}
+
+/* ===== NỀN TRANG ===== */
+body {
+    font-family: "Segoe UI", Arial, sans-serif;
+    margin: 10px;
+    color: #1F2937;
+    background-image: url("/static/thongke.jpg");
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+}
+
+/* ===== TIÊU ĐỀ ===== */
+h2 {
+    text-align: center;
+    color: #0F3D5E;
+    background: rgba(255,255,255,0.9);
+    padding: 12px;
+    border-radius: 10px;
+    margin-bottom: 14px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+}
+
+/* ===== LAYOUT CARD ===== */
+.layout {
+    display: flex;
+    gap: 16px;
+}
+
+.card {
+    background: rgba(255,255,255,0.96);
+    border-radius: 12px;
+    padding: 12px;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.08);
+    width: 100%;
+}
+
+/* ===== BẢNG ===== */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+th, td {
+    border: 1px solid #D1D5DB;
+    padding: 8px;
+    text-align: center;
+    vertical-align: middle;
+}
+
+th {
+    background: #E6EEF4;
+    color: #0F3D5E;
+    font-weight: 600;
+}
+
+/* ===== TRẠNG THÁI ===== */
+.status-on { color: #15803D; font-weight: 600; }
+.status-off { color: #6B7280; font-weight: 600; }
+
+/* ===== HIGHLIGHT XE ĐANG CÔNG TÁC ===== */
+tr.active-row {
+    background: rgba(34,197,94,0.12);
+}
+
+/* ===== CỘT ===== */
+.work-col {
+    text-align: left;
+    color: #1E293B;
+    line-height: 1.4;
+}
+
+.action-col {
+    width: 280px;
+}
+
+/* ===== FORM ===== */
+.action-col form {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+select,
+input[type="datetime-local"],
+textarea {
+    width: 100%;
+    padding: 6px;
+    border: 1px solid #CBD5E1;
+    border-radius: 4px;
+}
+
+/* ===== NÚT ===== */
+button {
+    padding: 8px;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+button.start { background: #2563EB; color: #fff; }
+button.stop  { background: #B91C1C; color: #fff; }
+
+button:hover { opacity: 0.9; }
+
+/* ===== RESPONSIVE MOBILE ===== */
+@media (max-width: 768px) {
+
+    table, thead, tbody, th, td, tr {
+        display: block;
+    }
+
+    thead { display: none; }
+
+    tr {
+        margin-bottom: 14px;
+        border-radius: 10px;
+        overflow: hidden;
+    }
+
+    td {
+        border: none;
+        border-bottom: 1px solid #E5E7EB;
+        text-align: left;
+        padding: 8px;
+    }
+
+    td::before {
+        content: attr(data-label);
+        display: block;
+        font-size: 12px;
+        font-weight: 600;
+        color: #0F3D5E;
+        margin-bottom: 2px;
+    }
+
+    .action-col {
+        width: 100%;
+    }
+
+    .layout {
+        flex-direction: column;
+    }
+}
+
+/* ===== TV / MÀN HÌNH LỚN ===== */
+@media (min-width: 1600px) {
+    body { font-size: 18px; }
+    h2 { font-size: 26px; }
+    table { font-size: 18px; }
+    th, td { padding: 14px; }
+    button { font-size: 18px; padding: 12px; }
+}
+.top-bar {
+    margin-bottom: 12px;
+}
+
+/* ===== NÚT QUAY VỀ ===== */
+.btn-back {
+    display: inline-block;
+    padding: 8px 14px;
+    background: #E11D48;      /* đỏ trang trọng */
+    color: #fff;
+    text-decoration: none;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.btn-back:hover {
+    opacity: 0.9;
+}
+/* ===== DASHBOARD ===== */
+.dashboard {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px,1fr));
+    gap: 18px;
+    margin-bottom: 20px;
+}
+
+.dash-box {
+    background: rgba(255,255,255,0.95);
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.08);
+    transition: 0.3s;
+    cursor: pointer;
+    position: relative;
+}
+
+.dash-box:hover {
+    transform: translateY(-4px);
+}
+
+.dash-title {
+    font-size: 14px;
+    color: #6B7280;
+}
+
+.dash-number {
+    font-size: 30px;
+    font-weight: 700;
+    margin-top: 6px;
+}
+
+.dash-total { border-left: 6px solid #2563EB; }
+.dash-active { border-left: 6px solid #16A34A; }
+.dash-home { border-left: 6px solid #F59E0B; }
+
+.dash-icon {
+    position: absolute;
+    right: 14px;
+    top: 14px;
+    font-size: 24px;
+    opacity: 0.25;
+}
+.selected {
+    transform: scale(1.05);
+    box-shadow: 0 8px 22px rgba(0,0,0,0.15);
+}
+input[type="number"] {
+    border: 1px solid #CBD5E1;
+    border-radius: 4px;
+    text-align: center;
+}
+</style>
+
+</head>
+
+<body>
+
+<header>
+    <h1>QUẢN LÝ ĐIỀU XE</h1>
+    
+</header>
+<!-- ===== DASHBOARD ===== -->
+<div class="dashboard">
+
+    <!-- Tổng số xe -->
+    <div class="dash-box dash-total"
+         onclick="location.href='/dieu-xe'">
+        <div class="dash-title">Tổng số xe</div>
+        <div class="dash-number">{{ tong_xe }}</div>
+        <div class="dash-icon">🚗</div>
+    </div>
+
+    <!-- Xe đang hoạt động -->
+    <div class="dash-box dash-active"
+         onclick="location.href='/dieu-xe?status=active'">
+        <div class="dash-title">Xe đang hoạt động</div>
+        <div class="dash-number">{{ xe_hoat_dong }}</div>
+        <div class="dash-icon">🟢</div>
+    </div>
+
+    <!-- Xe ở nhà -->
+    <div class="dash-box dash-home"
+         onclick="location.href='/dieu-xe?status=home'">
+        <div class="dash-title">Xe ở nhà</div>
+        <div class="dash-number">{{ xe_o_nha }}</div>
+        <div class="dash-icon">🏠</div>
+    </div>
+
+</div>
+</div>
+<div class="layout">
+<div class="card">
+
+<table>
+<thead>
+<tr>
+    <th>Xe</th>
+    <th>Trạng thái</th>
+    <th>Tài xế</th>
+    <th>Ngày đi</th>
+    
+    <th>Số KM</th>
+    <th>Nội dung công tác</th>
+    <th class="action-col">Thao tác</th>
+</tr>
+</thead>
+
+<tbody>
+{% for v in vehicles %}
+<tr class="{% if v[2] == 1 %}active-row{% endif %}">
+    <td data-label="Xe">{{ v[1] }}</td>
+
+    <td data-label="Trạng thái">
+        {% if v[2] == 1 %}
+            <span class="status-on">🟢 Đang công tác</span>
+        {% else %}
+            <span class="status-off">⚪ Xe trống</span>
+        {% endif %}
+    </td>
+
+    <td data-label="Tài xế">{{ v[3] or "-" }}</td>
+    <td data-label="Ngày đi">{{ v[4] or "-" }}</td>
+    
+
+<td data-label="Số KM">
+    {% if v[2] == 1 %}
+        <input type="number"
+               name="km_travel"
+               form="stop-form-{{ v[0] }}"
+               placeholder="Nhập KM"
+               min="0"
+               required
+               style="width:90px; padding:4px;">
+    {% else %}
+        -
+    {% endif %}
+</td>
+    <td data-label="Nội dung công tác" class="work-col">{{ v[7] or "-" }}</td>
+
+    <td data-label="Thao tác" class="action-col">
+        {% if v[2] == 0 %}
+        <form method="post" action="/start/{{ v[0] }}">
+            <select name="driver_id" required>
+                <option value="">-- Chọn tài xế --</option>
+                {% for d in drivers %}
+                    <option value="{{ d[0] }}">{{ d[1] }}</option>
+                {% endfor %}
+            </select>
+
+            <input type="datetime-local" name="start_time" required>
+
+            <textarea name="work_content" rows="2"
+                placeholder="Nhập nội dung công tác..." required></textarea>
+
+            <button class="start" type="submit">Điều xe</button>
+        </form>
+        {% else %}
+        <form method="post" action="/stop/{{ v[0] }}" id="stop-form-{{ v[0] }}">
+            <input type="datetime-local" name="end_time" required>
+            <button class="stop" type="submit">Kết thúc</button>
+        </form>
+        {% endif %}
+    </td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+
+
+</div>
+</div>
+
+<div class="top-bar">
+    <a href="/" class="btn-back">⬅ Quay về Trang chủ</a>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Thống kê điều xe</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<link rel="stylesheet" href="/static/style.css"></head>
+
+<body>
+<div class="overlay">
+
+<a href="/" class="back-link">⬅ Trang chủ</a>
+
+<div class="header">
+    <h1>THỐNG KÊ ĐIỀU XE</h1>
+</div>
+
+<form method="get">
+<div class="card">
+<h3>Bộ lọc tìm kiếm</h3>
+
+<div class="filter-bar">
+    <div class="filter-group">
+        <label>Từ ngày</label>
+        <input type="date" name="tu_ngay" value="{{ tu_ngay }}">
+    </div>
+
+    <div class="filter-group">
+        <label>Đến ngày</label>
+        <input type="date" name="den_ngay" value="{{ den_ngay }}">
+    </div>
+
+    <div class="filter-group">
+        <label>Xe</label>
+        <select name="xe">
+            <option value="">-- Tất cả --</option>
+            {% for x in danh_sach_xe %}
+            <option value="{{ x.plate }}" {% if x.plate==xe %}selected{% endif %}>
+                {{ x.plate }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="filter-group">
+        <label>Tài xế</label>
+        <select name="taixe">
+            <option value="">-- Tất cả --</option>
+            {% for t in danh_sach_taixe %}
+            <option value="{{ t.driver_name }}" {% if t.driver_name==taixe %}selected{% endif %}>
+                {{ t.driver_name }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <button class="filter-btn" type="submit">🔍 Xem</button>
+    <button type="submit"
+        name="export"
+        value="excel"
+        class="excel-btn">
+    📥 Xuất Excel
+</button>
+</div>
+
+</div>
+</form>
+
+<div class="card">
+<h3>Kết quả</h3>
+{% if not co_dieu_kien %}
+<p style="color:#475569">Vui lòng chọn ít nhất một điều kiện để xem thống kê.</p>
+
+{% elif ket_qua %}
+<div class="dashboard">
+
+    <div class="dash-box dash-total">
+        <div class="dash-title">Tổng số chuyến</div>
+        <div class="dash-number">{{ tong_chuyen }}</div>
+    </div>
+
+    <div class="dash-box dash-active">
+        <div class="dash-title">Tổng KM</div>
+        <div class="dash-number">{{ "{:,.0f}".format(tong_km) }}</div>
+    </div>
+
+    <div class="dash-box dash-home">
+        <div class="dash-title">Tổng giờ chạy</div>
+        <div class="dash-number">{{ tong_gio }}</div>
+    </div>
+
+</div>
+<table>
+
+<tr>
+    <th>Xe</th>
+    <th>Tài xế</th>
+    <th>Nội dung công tác</th>
+    <th>Giờ đi</th>
+    <th>Giờ về</th>
+    <th>KM</th>
+    <th>Thời gian (phút)</th>
+</tr>
+{% for r in ket_qua %}
+<tr>
+    <td>{{ r.plate }}</td>
+    <td>{{ r.driver_name }}</td>
+    <td>{{ r.work_content }}</td>
+    <td>{{ r.start_time[:16].replace("T"," ") }}</td>
+    <td>{{ r.end_time[:16].replace("T"," ") }}</td>
+    <td>{{ r.km_travel or 0 }}</td>
+    <td>{{ r.duration_minutes or 0 }}</td>
+</tr>
+{% endfor %}
+</table>
+{% else %}
+<p>Không có dữ liệu phù hợp.</p>
+{% endif %}
+</div>
+
+</div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+{% if ket_qua %}
+<div class="card">
+    <h3>Biểu đồ theo tháng</h3>
+    <canvas id="chart"></canvas>
+</div>
+
+<script>
+const ctx = document.getElementById('chart');
+
+new Chart(ctx, {
+    type: 'bar',
+    data: {
+        labels: {{ thang_labels | tojson }},
+        datasets: [
+            {
+                label: 'Tổng KM',
+                data: {{ data_km | tojson }},
+                borderWidth: 1
+            },
+            {
+                label: 'Số chuyến',
+                data: {{ data_chuyen | tojson }},
+                borderWidth: 1
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                position: 'top',
+            }
+        }
+    }
+});
+</script>
+{% endif %}
+</body>
+</html>

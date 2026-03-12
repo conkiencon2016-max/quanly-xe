@@ -1,0 +1,2467 @@
+from flask import Flask, render_template, request, redirect, session
+import sqlite3
+from datetime import datetime, date, timedelta
+import requests
+from functools import wraps
+from werkzeug.security import generate_password_hash, check_password_hash
+import os
+from dotenv import load_dotenv
+import time
+from openpyxl import Workbook
+from openpyxl.styles import Font
+from flask import send_file
+import io
+from zalo_service import handle_message
+from io import BytesIO
+from collections import defaultdict
+
+# =========================
+# INIT APP
+# =========================
+load_dotenv()
+
+app = Flask(__name__)
+app.secret_key = os.getenv("SECRET_KEY", "change-this-secret")
+
+# Session timeout 15 phút
+app.permanent_session_lifetime = timedelta(minutes=15)
+
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax",
+    SESSION_COOKIE_SECURE=False  # True nếu chạy HTTPS
+)
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+ZALO_BOT_TOKEN = os.getenv("ZALO_BOT_TOKEN")
+# =========================
+# KẾT NỐI DATABASE
+# =========================
+def db():
+    con = sqlite3.connect("fleet.db")
+    con.row_factory = sqlite3.Row
+    return con
+
+# =========================
+# sesion logout
+# =========================
+
+
+@app.before_request
+def auto_session_timeout():
+    session.permanent = True
+    now = int(time.time())
+
+    if "last_activity" in session:
+        elapsed = now - session["last_activity"]
+
+        # 15 phút = 900 giây
+        if elapsed > 900:
+            session.clear()
+            return redirect("/login")
+
+    session["last_activity"] = now
+
+# =========================
+# LOGIN DECORATOR PHÂN QUYỀN
+# =========================
+
+
+def login_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if "user_id" not in session:
+            return redirect("/login")
+        return f(*args, **kwargs)
+    return decorated
+
+
+def admin_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if session.get("role") != "admin":
+            return "Không có quyền truy cập", 403
+        return f(*args, **kwargs)
+    return decorated
+
+
+def driver_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if session.get("role") != "driver":
+            return "Không có quyền truy cập", 403
+        return f(*args, **kwargs)
+    return decorated
+
+
+# =========================
+# TRANG CHỦ
+# =========================
+@app.route("/")
+@login_required
+def home():
+    return render_template(
+        "home.html",
+        role=session.get("role"),
+        username=session.get("username")
+    )
+# =========================
+# ĐIỀU XE (WEB CON)
+# =========================
+@app.route("/dieu-xe")
+@login_required
+@admin_required
+def dieu_xe():
+    con = db()
+
+    # ===== THỐNG KÊ DASHBOARD =====
+    tong_xe = con.execute(
+        "SELECT COUNT(*) FROM vehicles"
+    ).fetchone()[0]
+
+    xe_hoat_dong = con.execute(
+        "SELECT COUNT(*) FROM vehicles WHERE status = 1"
+    ).fetchone()[0]
+
+    xe_o_nha = con.execute(
+        "SELECT COUNT(*) FROM vehicles WHERE status = 0"
+    ).fetchone()[0]
+
+    # ===== LỌC THEO DASHBOARD =====
+    filter_status = request.args.get("status")
+
+    sql_filter = ""
+    params = []
+
+    if filter_status == "active":
+        sql_filter = "WHERE vehicles.status = 1"
+    elif filter_status == "home":
+        sql_filter = "WHERE vehicles.status = 0"
+
+    # ===== LẤY DANH SÁCH XE =====
+    vehicles_raw = con.execute(f"""
+        SELECT
+            vehicles.id,
+            vehicles.plate,
+            vehicles.status,
+            drivers.name AS driver_name,
+            vehicles.start_time,
+            vehicles.end_time,
+            vehicles.work_content
+        FROM vehicles
+        LEFT JOIN drivers ON vehicles.driver_id = drivers.id
+        {sql_filter}
+    """, params).fetchall()
+
+    # ===== TÀI XẾ CHƯA BẬN =====
+    busy_drivers = con.execute("""
+        SELECT driver_id
+        FROM vehicles
+        WHERE status = 1 AND driver_id IS NOT NULL
+    """).fetchall()
+
+    busy_driver_ids = [d["driver_id"] for d in busy_drivers]
+
+    if busy_driver_ids:
+        placeholders = ",".join("?" * len(busy_driver_ids))
+        drivers = con.execute(
+            f"SELECT id, name FROM drivers WHERE id NOT IN ({placeholders})",
+            busy_driver_ids
+        ).fetchall()
+    else:
+        drivers = con.execute(
+            "SELECT id, name FROM drivers"
+        ).fetchall()
+
+    vehicles = []
+
+    for v in vehicles_raw:
+        start = end = duration = None
+
+        if v["start_time"]:
+            start_dt = datetime.fromisoformat(v["start_time"])
+            start = start_dt.strftime("%d/%m/%Y")
+
+        if v["end_time"]:
+            end_dt = datetime.fromisoformat(v["end_time"])
+            end = end_dt.strftime("%d/%m/%Y")
+
+        if v["start_time"] and v["end_time"]:
+            diff = end_dt - start_dt
+            total_minutes = int(diff.total_seconds() / 60)
+            hours = total_minutes // 60
+            minutes = total_minutes % 60
+            duration = f"{hours} giờ {minutes} phút" if hours > 0 else f"{minutes} phút"
+
+        vehicles.append((
+            v["id"],
+            v["plate"],
+            v["status"],
+            v["driver_name"],
+            start,
+            end,
+            duration,
+            v["work_content"]
+        ))
+
+    return render_template(
+        "dieu_xe.html",
+        vehicles=vehicles,
+        drivers=drivers,
+        tong_xe=tong_xe,
+        xe_hoat_dong=xe_hoat_dong,
+        xe_o_nha=xe_o_nha
+    )
+
+# =========================
+# RA BÃI
+# =========================
+@app.route("/start/<int:vid>", methods=["POST"])
+def start(vid):
+
+    con = db()
+
+    try:
+        driver_id = int(request.form["driver_id"])
+        start_time = request.form["start_time"]
+        work_content = request.form["work_content"]
+
+        # kiểm tra tài xế bận
+        busy = con.execute("""
+            SELECT 1 FROM vehicles
+            WHERE status = 1 AND driver_id = ?
+        """, (driver_id,)).fetchone()
+
+        if busy:
+            return "Lỗi: Tài xế đang lái xe khác!", 400
+
+        # cập nhật xe
+        con.execute("""
+            UPDATE vehicles
+            SET status = 1,
+                driver_id = ?,
+                start_time = ?,
+                end_time = NULL,
+                work_content = ?
+            WHERE id = ?
+        """, (driver_id, start_time, work_content, vid))
+
+        # lấy thông tin xe + tài xế
+        info = con.execute("""
+            SELECT v.plate,
+                   d.name,
+                   d.zalo_user_id,
+                   d.telegram_chat_id
+            FROM vehicles v
+            JOIN drivers d ON v.driver_id = d.id
+            WHERE v.id = ?
+        """, (vid,)).fetchone()
+
+        con.commit()
+
+    except Exception as e:
+        con.rollback()
+        return f"Lỗi hệ thống: {str(e)}", 500
+
+    finally:
+        con.close()
+
+    # =============================
+    # GỬI THÔNG BÁO BOT
+    # =============================
+    start_dt = datetime.fromisoformat(start_time)
+    thoi_gian_dep = start_dt.strftime("%H:%M ngày %d/%m/%Y")
+    if info:
+
+        noi_dung = f"""
+🚗 THÔNG BÁO ĐIỀU XE
+
+Xe: {info['plate']}
+Tài xế: {info['name']}
+Thời gian: {thoi_gian_dep}
+
+Nội dung:
+{work_content}
+
+Vui lòng thực hiện theo phân công.
+"""
+
+        # gửi zalo
+        if info["zalo_user_id"]:
+            gui_zalo_cho_taixe(
+                info["zalo_user_id"],
+                noi_dung
+            )
+
+        # gửi telegram
+        if info["telegram_chat_id"]:
+            send_telegram(
+                info["telegram_chat_id"],
+                noi_dung
+            )
+
+        # ghi log
+        con_log = db()
+        con_log.execute("""
+            INSERT INTO zalo_logs
+            (driver_id, plate, content, status)
+            VALUES (?, ?, ?, ?)
+        """, (
+            driver_id,
+            info["plate"],
+            noi_dung,
+            "success"
+        ))
+        con_log.commit()
+        con_log.close()
+
+    return redirect("/dieu-xe")
+# =========================
+# VÀO BÃI (KẾT THÚC ĐIỀU XE)
+# =========================
+@app.route("/stop/<int:vid>", methods=["POST"])
+def stop(vid):
+    con = db()
+
+    try:
+        end_time = request.form.get("end_time")
+        km_travel = request.form.get("km_travel", 0)
+
+        if not end_time:
+            return "Thiếu thời gian kết thúc", 400
+
+        # Ép kiểu km
+        try:
+            km_travel = int(km_travel)
+            if km_travel < 0:
+                km_travel = 0
+        except:
+            km_travel = 0
+
+        # 1️⃣ Lấy thông tin chuyến đi
+        trip = con.execute("""
+            SELECT
+                vehicles.id,
+                vehicles.plate,
+                vehicles.km,
+                drivers.name AS driver_name,
+                vehicles.start_time,
+                vehicles.work_content
+            FROM vehicles
+            LEFT JOIN drivers ON vehicles.driver_id = drivers.id
+            WHERE vehicles.id = ?
+        """, (vid,)).fetchone()
+
+        if not trip:
+            return "Không tìm thấy chuyến xe", 404
+
+        if not trip["start_time"]:
+            return "Xe chưa có thời gian bắt đầu", 400
+
+        # 2️⃣ Tính thời gian chạy
+        start_dt = datetime.fromisoformat(trip["start_time"])
+        end_dt = datetime.fromisoformat(end_time)
+
+        if end_dt < start_dt:
+            return "Thời gian kết thúc không hợp lệ", 400
+
+        duration_minutes = int((end_dt - start_dt).total_seconds() / 60)
+
+        # 3️⃣ GHI LỊCH SỬ
+        con.execute("""
+            INSERT INTO trip_history (
+                vehicle_id,
+                plate,
+                driver_name,
+                start_time,
+                end_time,
+                duration_minutes,
+                work_content,
+                km_travel
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            trip["id"],
+            trip["plate"],
+            trip["driver_name"],
+            trip["start_time"],
+            end_time,
+            duration_minutes,
+            trip["work_content"],
+            km_travel
+        ))
+
+        # 4️⃣ CỘNG DỒN KM VÀO XE
+        current_km = trip["km"] or 0
+        new_km = current_km + km_travel
+
+        con.execute("""
+            UPDATE vehicles
+            SET km = ?
+            WHERE id = ?
+        """, (new_km, vid))
+
+        # 5️⃣ RESET TRẠNG THÁI XE
+        con.execute("""
+            UPDATE vehicles
+            SET status = 0,
+                driver_id = NULL,
+                start_time = NULL,
+                end_time = NULL,
+                work_content = NULL
+            WHERE id = ?
+        """, (vid,))
+
+        con.commit()
+
+    except Exception as e:
+        con.rollback()
+        return f"Lỗi hệ thống: {str(e)}", 500
+
+    finally:
+        con.close()
+
+    return redirect("/dieu-xe")
+
+
+
+# =========================
+# DRIVER KẾT THÚC XE
+# =========================
+@app.route("/stop-driver/<int:vid>", methods=["POST"])
+@login_required
+@driver_required
+def stop_driver(vid):
+
+    username = session.get("username")
+    con = db()
+
+    try:
+        # Lấy driver theo phone
+        driver = con.execute("""
+            SELECT id, name
+            FROM drivers
+            WHERE phone = ?
+        """, (username,)).fetchone()
+
+        if not driver:
+            return "Không có quyền thao tác", 403
+
+        trip = con.execute("""
+            SELECT *
+            FROM vehicles
+            WHERE id=? AND driver_id=? AND status=1
+        """, (vid, driver["id"])).fetchone()
+
+        if not trip:
+            return "Không có quyền thao tác", 403
+
+        end_time = request.form.get("end_time")
+        km_travel = int(request.form.get("km_travel", 0))
+
+        start_dt = datetime.fromisoformat(trip["start_time"])
+        end_dt = datetime.fromisoformat(end_time)
+
+        if end_dt < start_dt:
+            return "Thời gian không hợp lệ", 400
+
+        duration_minutes = int((end_dt - start_dt).total_seconds() / 60)
+
+        # Lưu lịch sử
+        con.execute("""
+            INSERT INTO trip_history (
+                vehicle_id, plate, driver_name,
+                start_time, end_time,
+                duration_minutes, work_content, km_travel
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            trip["id"],
+            trip["plate"],
+            driver["name"],
+            trip["start_time"],
+            end_time,
+            duration_minutes,
+            trip["work_content"],
+            km_travel
+        ))
+
+        # Reset xe
+        new_km = (trip["km"] or 0) + km_travel
+
+        con.execute("""
+            UPDATE vehicles
+            SET km=?,
+                status=0,
+                driver_id=NULL,
+                start_time=NULL,
+                end_time=NULL,
+                work_content=NULL
+            WHERE id=?
+        """, (new_km, vid))
+
+        con.commit()
+
+    except Exception as e:
+        con.rollback()
+        return f"Lỗi hệ thống: {str(e)}", 500
+
+    finally:
+        con.close()
+
+    # 🔁 Sau khi reset → quay lại trang
+    # Vì không còn status=1 nên trang sẽ trống
+    return redirect("/dieu-xe-driver")
+# =========================
+# QUẢN LÝ TÀI XẾ 
+# =========================
+@app.route("/quan-ly-tai-xe", methods=["GET", "POST"])
+def quan_ly_tai_xe():
+    con = db()
+
+    # =========================
+    # THÊM TÀI XẾ
+    # =========================
+    if request.method == "POST":
+        try:
+            name = request.form["name"].strip()
+            phone = request.form.get("phone", "").strip()
+            address = request.form.get("address", "").strip()
+            zalo_user_id = request.form.get("zalo_user_id", "").strip()
+
+            if not name:
+                return "Thiếu tên tài xế", 400
+
+            con.execute("""
+                INSERT INTO drivers (name, phone, address, zalo_user_id)
+                VALUES (?, ?, ?, ?)
+            """, (name, phone, address, zalo_user_id))
+
+            con.commit()
+
+        except Exception as e:
+            con.rollback()
+            return f"Lỗi hệ thống: {str(e)}", 500
+
+        finally:
+            con.close()
+
+        return redirect("/quan-ly-tai-xe")
+
+    # =========================
+    # LẤY DANH SÁCH TÀI XẾ
+    # =========================
+    drivers = con.execute("""
+        SELECT
+            d.id,
+            d.name,
+            d.phone,
+            d.address,
+            d.zalo_user_id,
+            CASE
+                WHEN EXISTS (
+                    SELECT 1 FROM vehicles v
+                    WHERE v.driver_id = d.id
+                    AND v.status = 1
+                )
+                THEN 1
+                ELSE 0
+            END AS is_busy
+        FROM drivers d
+        ORDER BY d.name
+    """).fetchall()
+
+    con.close()
+
+    return render_template(
+        "quan_ly_tai_xe.html",
+        drivers=drivers
+    )
+# =========================
+# Sửa tài xế
+# =========================
+
+@app.route("/sua-tai-xe/<int:did>", methods=["GET", "POST"])
+def sua_tai_xe(did):
+    con = db()
+
+    if request.method == "POST":
+        name = request.form["name"]
+        phone = request.form["phone"]
+        address = request.form["address"]
+
+        con.execute("""
+            UPDATE drivers
+            SET name=?, phone=?, address=?
+            WHERE id=?
+        """, (name, phone, address, did))
+        con.commit()
+        return redirect("/quan-ly-tai-xe")
+
+    driver = con.execute(
+        "SELECT * FROM drivers WHERE id = ?",
+        (did,)
+    ).fetchone()
+
+    return render_template("sua_tai_xe.html", driver=driver)
+
+# =========================
+# Xóa tài xế
+# =========================
+
+@app.route("/xoa-tai-xe/<int:did>")
+def xoa_tai_xe(did):
+    con = db()
+
+    busy = con.execute("""
+        SELECT 1 FROM vehicles
+        WHERE status = 1 AND driver_id = ?
+    """, (did,)).fetchone()
+
+    if busy:
+        return "Không thể xóa: Tài xế đang điều xe", 400
+
+    con.execute("DELETE FROM drivers WHERE id = ?", (did,))
+    con.commit()
+    return redirect("/quan-ly-tai-xe")
+# =========================
+# quản lý phương tiện
+# =========================
+
+
+@app.route("/quan-ly-xe-menu")
+def quan_ly_xe_menu():
+    return render_template("quan_ly_xe_menu.html")
+# =========================
+# lịch sử đăng kiểm
+# =========================
+
+@app.route("/lich-su-dang-kiem")
+@login_required
+def lich_su_dang_kiem():
+
+    con = db()
+
+    search = request.args.get("search", "")
+    tu_ngay = request.args.get("tu_ngay")
+    den_ngay = request.args.get("den_ngay")
+
+    sql = """
+        SELECT dk.*, v.plate
+        FROM dang_kiem dk
+        JOIN vehicles v ON dk.vehicle_id = v.id
+        WHERE 1=1
+    """
+
+    params = []
+
+    if search:
+        sql += " AND (v.plate LIKE ? OR dk.so_dang_ky LIKE ?)"
+        params += [f"%{search}%", f"%{search}%"]
+
+    if tu_ngay:
+        sql += " AND dk.ngay_dang_ky >= ?"
+        params.append(tu_ngay)
+
+    if den_ngay:
+        sql += " AND dk.ngay_dang_ky <= ?"
+        params.append(den_ngay)
+
+    sql += " ORDER BY dk.ngay_dang_ky DESC"
+
+    data = con.execute(sql, params).fetchall()
+
+    # =========================
+    # EXPORT EXCEL
+    # =========================
+    if request.args.get("export") == "excel":
+
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "DangKiem"
+
+        headers = [
+            "Biển số",
+            "Số đăng ký",
+            "Loại",
+            "Ngày đăng ký",
+            "Ngày hết hạn",
+            "Trung tâm",
+            "Chi phí",
+            "Người thực hiện"
+        ]
+
+        ws.append(headers)
+
+        for cell in ws[1]:
+            cell.font = Font(bold=True)
+
+        for r in data:
+            ws.append([
+                r["plate"],
+                r["so_dang_ky"],
+                r["loai"],
+                r["ngay_dang_ky"],
+                r["ngay_het_han"],
+                r["trung_tam"],
+                r["chi_phi"],
+                r["nguoi_thuc_hien"]
+            ])
+
+        for col in ws.columns:
+            ws.column_dimensions[col[0].column_letter].width = 18
+
+        file_stream = io.BytesIO()
+        wb.save(file_stream)
+        file_stream.seek(0)
+
+        return send_file(
+            file_stream,
+            download_name="lich_su_dang_kiem.xlsx",
+            as_attachment=True
+        )
+
+    con.close()
+
+    return render_template(
+        "lich_su_dang_kiem.html",
+        danh_sach=data
+    )
+
+# =========================
+# THÊM ĐĂNG KIỂM (CHUẨN NGHIỆP VỤ)
+# =========================
+@app.route("/them-dang-kiem", methods=["GET", "POST"])
+def them_dang_kiem():
+    con = db()   # dùng db() để có row_factory
+
+    if request.method == "POST":
+        try:
+            vehicle_id = request.form["vehicle_id"]
+            so_dang_ky = request.form["so_dang_ky"].strip()
+            loai = request.form["loai"]
+            ngay_dang_ky = request.form["ngay_dang_ky"]
+            ngay_het_han = request.form["ngay_het_han"]
+            trung_tam = request.form.get("trung_tam", "").strip()
+            chi_phi = request.form.get("chi_phi") or 0
+            nguoi_thuc_hien = request.form.get("nguoi_thuc_hien", "").strip()
+            ghi_chu = request.form.get("ghi_chu", "").strip()
+
+            # ===== VALIDATE =====
+            if not so_dang_ky:
+                return "Thiếu số đăng ký", 400
+
+            if ngay_het_han < ngay_dang_ky:
+                return "Ngày hết hạn không hợp lệ", 400
+
+            # ===== LƯU LỊCH SỬ ĐĂNG KIỂM =====
+            con.execute("""
+                INSERT INTO dang_kiem
+                (vehicle_id, so_dang_ky, loai,
+                 ngay_dang_ky, ngay_het_han,
+                 trung_tam, chi_phi,
+                 nguoi_thuc_hien, ghi_chu)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                vehicle_id,
+                so_dang_ky,
+                loai,
+                ngay_dang_ky,
+                ngay_het_han,
+                trung_tam,
+                chi_phi,
+                nguoi_thuc_hien,
+                ghi_chu
+            ))
+
+            # ===== CẬP NHẬT HẠN ĐĂNG KIỂM HIỆN TẠI CHO XE =====
+            con.execute("""
+                UPDATE vehicles
+                SET ngay_het_han_dang_kiem = ?
+                WHERE id = ?
+            """, (ngay_het_han, vehicle_id))
+
+            con.commit()
+
+        except Exception as e:
+            con.rollback()
+            return f"Lỗi hệ thống: {str(e)}", 500
+
+        finally:
+            con.close()
+
+        return redirect("/lich-su-dang-kiem")
+
+    # ===== LOAD DANH SÁCH XE =====
+    vehicles = con.execute("""
+        SELECT id, plate
+        FROM vehicles
+        ORDER BY plate
+    """).fetchall()
+
+    con.close()
+
+    return render_template(
+        "them_dang_kiem.html",
+        vehicles=vehicles
+    )
+# =========================
+# lịch sử bảo dưỡng
+# =========================
+
+
+
+@app.route("/lich-su-bao-duong")
+@login_required
+def lich_su_bao_duong():
+
+    con = db()
+
+    search = request.args.get("search", "")
+    tu_ngay = request.args.get("tu_ngay")
+    den_ngay = request.args.get("den_ngay")
+
+    sql = """
+        SELECT bd.*, v.plate
+        FROM bao_duong bd
+        JOIN vehicles v ON bd.vehicle_id = v.id
+        WHERE 1=1
+    """
+
+    params = []
+
+    if search:
+        sql += " AND (v.plate LIKE ? OR bd.noi_dung LIKE ?)"
+        params += [f"%{search}%", f"%{search}%"]
+
+    if tu_ngay:
+        sql += " AND bd.ngay_thuc_hien >= ?"
+        params.append(tu_ngay)
+
+    if den_ngay:
+        sql += " AND bd.ngay_thuc_hien <= ?"
+        params.append(den_ngay)
+
+    sql += " ORDER BY bd.ngay_thuc_hien DESC"
+
+    data = con.execute(sql, params).fetchall()
+
+    # =========================
+    # EXPORT EXCEL
+    # =========================
+    if request.args.get("export") == "excel":
+
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "BaoDuong"
+
+        headers = [
+            "Biển số",
+            "Loại",
+            "Nội dung",
+            "Ngày thực hiện",
+            "Ngày hoàn thành",
+            "Trạng thái",
+            "Đơn vị",
+            "Chi phí",
+            "KM tại thời điểm"
+        ]
+
+        ws.append(headers)
+
+        for cell in ws[1]:
+            cell.font = Font(bold=True)
+
+        for r in data:
+            ws.append([
+                r["plate"],
+                r["loai"],
+                r["noi_dung"],
+                r["ngay_thuc_hien"],
+                r["ngay_hoan_thanh"],
+                r["trang_thai"],
+                r["don_vi"],
+                r["chi_phi"],
+                r["km_tai_thoi_diem"]
+            ])
+
+        # Auto width
+        for col in ws.columns:
+            ws.column_dimensions[col[0].column_letter].width = 18
+
+        file_stream = io.BytesIO()
+        wb.save(file_stream)
+        file_stream.seek(0)
+
+        return send_file(
+            file_stream,
+            download_name="lich_su_bao_duong.xlsx",
+            as_attachment=True
+        )
+
+    con.close()
+
+    return render_template(
+        "lich_su_bao_duong.html",
+        danh_sach=data
+    )
+
+
+# =========================
+# thêm bảo dưỡng
+# =========================
+# =========================
+# THÊM BẢO DƯỠNG (CHUẨN NGHIỆP VỤ)
+# =========================
+@app.route("/them-bao-duong", methods=["GET", "POST"])
+def them_bao_duong():
+    con = db()
+
+    if request.method == "POST":
+        try:
+            vehicle_id = request.form["vehicle_id"]
+            loai = request.form["loai"]
+            noi_dung = request.form["noi_dung"].strip()
+            ngay_thuc_hien = request.form["ngay_thuc_hien"]
+            ngay_hoan_thanh = request.form.get("ngay_hoan_thanh")
+            trang_thai = request.form["trang_thai"]
+            don_vi = request.form.get("don_vi", "").strip()
+            ghi_chu = request.form.get("ghi_chu", "").strip()
+
+            # ===== XỬ LÝ CHI PHÍ =====
+            chi_phi_raw = request.form.get("chi_phi", "0")
+            chi_phi_clean = chi_phi_raw.replace(".", "").replace(",", "")
+            try:
+                chi_phi = int(chi_phi_clean)
+                if chi_phi < 0:
+                    return "Chi phí không hợp lệ", 400
+            except:
+                chi_phi = 0
+
+            # ===== VALIDATE NGÀY =====
+            if trang_thai == "hoan_thanh":
+                if not ngay_hoan_thanh:
+                    return "Thiếu ngày hoàn thành", 400
+                if ngay_hoan_thanh < ngay_thuc_hien:
+                    return "Ngày hoàn thành không hợp lệ", 400
+
+            # ===== LẤY KM HIỆN TẠI CỦA XE =====
+            vehicle = con.execute(
+                "SELECT km FROM vehicles WHERE id=?",
+                (vehicle_id,)
+            ).fetchone()
+
+            if not vehicle:
+                return "Không tìm thấy xe", 404
+
+            current_km = vehicle["km"] or 0
+
+            # ===== 1️⃣ LƯU LỊCH SỬ BẢO DƯỠNG =====
+            con.execute("""
+                INSERT INTO bao_duong
+                (vehicle_id, loai, noi_dung,
+                 ngay_thuc_hien, ngay_hoan_thanh,
+                 trang_thai, don_vi, chi_phi,
+                 km_tai_thoi_diem, ghi_chu)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                vehicle_id,
+                loai,
+                noi_dung,
+                ngay_thuc_hien,
+                ngay_hoan_thanh,
+                trang_thai,
+                don_vi,
+                chi_phi,
+                current_km,
+                ghi_chu
+            ))
+
+            # ===== 2️⃣ CẬP NHẬT MỐC KM NẾU HOÀN THÀNH =====
+            if trang_thai == "hoan_thanh":
+                con.execute("""
+                    UPDATE vehicles
+                    SET last_maintenance_km = ?
+                    WHERE id = ?
+                """, (current_km, vehicle_id))
+
+            con.commit()
+
+        except Exception as e:
+            con.rollback()
+            return f"Lỗi hệ thống: {str(e)}", 500
+
+        finally:
+            con.close()
+
+        return redirect("/lich-su-bao-duong")
+
+    # ===== LOAD DANH SÁCH XE =====
+    vehicles = con.execute("""
+        SELECT id, plate
+        FROM vehicles
+        ORDER BY plate
+    """).fetchall()
+
+    con.close()
+    return render_template("them_bao_duong.html", vehicles=vehicles)
+
+
+# =========================
+# báo cáo km
+# =========================
+
+@app.route("/bao-cao-km")
+def bao_cao_km():
+    con = db()
+
+    data = con.execute("""
+        SELECT
+            plate,
+            strftime('%Y-%m', start_time) AS thang,
+            SUM(km_travel) AS tong_km
+        FROM trip_history
+        GROUP BY plate, thang
+        ORDER BY thang DESC
+    """).fetchall()
+
+    con.close()
+
+    return render_template("bao_cao_km.html", data=data)
+# =========================
+# quản lý xe
+# =========================
+
+# =========================
+# QUẢN LÝ XE
+# =========================
+
+from datetime import datetime, date
+
+@app.route("/quan-ly-xe", methods=["GET", "POST"])
+def quan_ly_xe():
+    con = db()
+
+    # =========================
+    # THÊM XE
+    # =========================
+    if request.method == "POST":
+        try:
+            plate = request.form["plate"].strip()
+            brand = request.form.get("brand")
+            year = request.form.get("year")
+            km = int(request.form.get("km") or 0)
+            fuel_norm = float(request.form.get("fuel_norm") or 0)
+            ngay_het_han_dk = request.form.get("ngay_het_han_dang_kiem")
+
+            con.execute("""
+                INSERT INTO vehicles (
+                    plate,
+                    brand,
+                    year,
+                    km,
+                    fuel_norm,
+                    last_maintenance_km,
+                    maintenance_cycle,
+                    ngay_het_han_dang_kiem,
+                    status,
+                    driver_id,
+                    start_time,
+                    end_time,
+                    work_content
+                )
+                VALUES (?, ?, ?, ?, ?, ?, 5000, ?, 
+                        0, NULL, NULL, NULL, NULL)
+            """, (
+                plate,
+                brand,
+                year,
+                km,
+                fuel_norm,
+                km,   # mốc bảo dưỡng = km hiện tại
+                ngay_het_han_dk
+            ))
+
+            con.commit()
+
+        except Exception as e:
+            con.rollback()
+            return f"Lỗi hệ thống: {str(e)}", 500
+
+        finally:
+            con.close()
+
+        return redirect("/quan-ly-xe")
+
+    # =========================
+    # DASHBOARD ĐẾM SỐ LƯỢNG
+    # =========================
+    tong_xe = con.execute(
+        "SELECT COUNT(*) FROM vehicles"
+    ).fetchone()[0]
+
+    qua_han_bd = con.execute("""
+        SELECT COUNT(*) FROM vehicles
+        WHERE (km - IFNULL(last_maintenance_km,0))
+              >= IFNULL(maintenance_cycle,5000)
+    """).fetchone()[0]
+
+    qua_han_dk = con.execute("""
+        SELECT COUNT(*) FROM vehicles
+        WHERE ngay_het_han_dang_kiem IS NOT NULL
+        AND DATE(ngay_het_han_dang_kiem) < DATE('now')
+    """).fetchone()[0]
+
+    # =========================
+    # LỌC THEO DASHBOARD
+    # =========================
+    filter_type = request.args.get("filter")
+
+    sql = """
+        SELECT *
+        FROM vehicles
+        WHERE 1=1
+    """
+
+    if filter_type == "bao_duong":
+        sql += """
+        AND (km - IFNULL(last_maintenance_km,0))
+            >= IFNULL(maintenance_cycle,5000)
+        """
+
+    elif filter_type == "dang_kiem":
+        sql += """
+        AND ngay_het_han_dang_kiem IS NOT NULL
+        AND DATE(ngay_het_han_dang_kiem) < DATE('now')
+        """
+
+    sql += " ORDER BY plate"
+
+    vehicles_raw = con.execute(sql).fetchall()
+
+    # =========================
+    # XỬ LÝ CẢNH BÁO CHI TIẾT
+    # =========================
+    today = date.today()
+    vehicles = []
+
+    for v in vehicles_raw:
+
+        km_hien_tai = v["km"] or 0
+        last_bd = v["last_maintenance_km"] or 0
+        cycle = v["maintenance_cycle"] or 5000
+        km_da_di = km_hien_tai - last_bd
+
+        # Cảnh báo bảo dưỡng
+        if km_da_di >= cycle:
+            canh_bao_bd = "due"
+        elif km_da_di >= cycle - 500:
+            canh_bao_bd = "warning"
+        else:
+            canh_bao_bd = "ok"
+
+        # Cảnh báo đăng kiểm
+        canh_bao_dk = "ok"
+        if v["ngay_het_han_dang_kiem"]:
+            expiry = datetime.strptime(
+                v["ngay_het_han_dang_kiem"], "%Y-%m-%d"
+            ).date()
+
+            diff = (expiry - today).days
+
+            if diff < 0:
+                canh_bao_dk = "expired"
+            elif diff <= 30:
+                canh_bao_dk = "warning"
+
+        vehicles.append({
+            **dict(v),
+            "km_da_di": km_da_di,
+            "canh_bao_bd": canh_bao_bd,
+            "canh_bao_dk": canh_bao_dk
+        })
+
+    con.close()
+
+    return render_template(
+        "quan_ly_xe.html",
+        vehicles=vehicles,
+        tong_xe=tong_xe,
+        qua_han_bd=qua_han_bd,
+        qua_han_dk=qua_han_dk,
+        filter_type=filter_type
+    )
+# =========================
+# XÓA XE
+# =========================
+@app.route("/xoa-xe/<int:vid>")
+def xoa_xe(vid):
+    con = db()
+
+    busy = con.execute("""
+        SELECT 1 FROM vehicles
+        WHERE id = ? AND status = 1
+    """, (vid,)).fetchone()
+
+    if busy:
+        return "Không thể xóa: Xe đang được điều", 400
+
+    con.execute("DELETE FROM vehicles WHERE id = ?", (vid,))
+    con.commit()
+    con.close()
+
+    return redirect("/quan-ly-xe")
+
+
+# =========================
+# SỬA XE (HOÀN CHỈNH)
+# =========================
+@app.route("/sua-xe/<int:vid>", methods=["GET", "POST"])
+def sua_xe(vid):
+    con = db()
+
+    if request.method == "POST":
+        try:
+            # ===== LẤY DỮ LIỆU TỪ FORM =====
+            plate = request.form["plate"].strip()
+            brand = request.form.get("brand", "").strip()
+            year = request.form.get("year") or None
+            km = int(request.form.get("km") or 0)
+            fuel_norm = float(request.form.get("fuel_norm") or 0)
+
+            last_maintenance_km = int(
+                request.form.get("last_maintenance_km") or 0
+            )
+
+            maintenance_cycle = int(
+                request.form.get("maintenance_cycle") or 5000
+            )
+
+            ngay_het_han_dk = request.form.get(
+                "ngay_het_han_dang_kiem"
+            ) or None
+
+            # ===== VALIDATE NGHIỆP VỤ =====
+            if km < 0:
+                return "KM không hợp lệ", 400
+
+            if last_maintenance_km > km:
+                return "KM bảo dưỡng không thể lớn hơn KM hiện tại", 400
+
+            if maintenance_cycle <= 0:
+                maintenance_cycle = 5000
+
+            # ===== UPDATE DATABASE =====
+            con.execute("""
+                UPDATE vehicles
+                SET plate=?,
+                    brand=?,
+                    year=?,
+                    km=?,
+                    fuel_norm=?,
+                    last_maintenance_km=?,
+                    maintenance_cycle=?,
+                    ngay_het_han_dang_kiem=?
+                WHERE id=?
+            """, (
+                plate,
+                brand,
+                year,
+                km,
+                fuel_norm,
+                last_maintenance_km,
+                maintenance_cycle,
+                ngay_het_han_dk,
+                vid
+            ))
+
+            con.commit()
+
+        except Exception as e:
+            con.rollback()
+            return f"Lỗi hệ thống: {str(e)}", 500
+
+        finally:
+            con.close()
+
+        return redirect("/quan-ly-xe")
+
+    # =========================
+    # GET: LẤY DỮ LIỆU XE
+    # =========================
+    vehicle = con.execute("""
+        SELECT
+            id,
+            plate,
+            brand,
+            year,
+            km,
+            fuel_norm,
+            last_maintenance_km,
+            maintenance_cycle,
+            ngay_het_han_dang_kiem
+        FROM vehicles
+        WHERE id=?
+    """, (vid,)).fetchone()
+
+    con.close()
+
+    if not vehicle:
+        return "Không tìm thấy xe", 404
+
+    return render_template(
+        "sua_xe.html",
+        vehicle=vehicle
+    )
+
+
+# =========================
+# LOGIN
+# =========================
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+
+    if request.method == "POST":
+
+        username = request.form["username"].strip()
+        password = request.form["password"]
+
+        con = db()
+        user = con.execute("""
+            SELECT * FROM users
+            WHERE username=? AND is_active=1
+        """, (username,)).fetchone()
+        con.close()
+
+        if user and check_password_hash(user["password_hash"], password):
+
+            session.clear()
+            session["user_id"] = user["id"]
+            session["username"] = user["username"]
+            session["role"] = user["role"]
+            session["driver_id"] = user["driver_id"]
+
+            if user["role"] == "admin":
+                return redirect("/")
+            else:
+                return redirect("/dieu-xe-driver")
+
+        return render_template("login_dieuxe.html", error="Sai tài khoản hoặc mật khẩu")
+
+    return render_template("login_dieuxe.html")
+
+# =========================
+# LOOUT
+# =========================
+
+
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect("/login")
+
+
+# =========================
+# dieu xe dirver
+# =========================
+@app.route("/dieu-xe-driver")
+@login_required
+@driver_required
+def dieu_xe_driver():
+
+    username = session.get("username")  # chính là số điện thoại
+    con = db()
+
+    # 1️⃣ Lấy driver theo số điện thoại
+    driver = con.execute("""
+        SELECT id, name
+        FROM drivers
+        WHERE phone = ?
+    """, (username,)).fetchone()
+
+    if not driver:
+        con.close()
+        return "Không tìm thấy tài xế tương ứng", 403
+
+    # 2️⃣ Lấy xe đang công tác của tài xế đó
+    vehicle = con.execute("""
+        SELECT *
+        FROM vehicles
+        WHERE driver_id = ?
+        AND status = 1
+    """, (driver["id"],)).fetchone()
+
+    con.close()
+
+    return render_template(
+        "dieu_xe_driver.html",
+        vehicle=vehicle,
+        driver_name=driver["name"]
+    )
+# =========================
+# quan ly user
+# =========================
+
+@app.route("/quan-ly-user", methods=["GET", "POST"])
+@login_required
+@admin_required
+def quan_ly_user():
+
+    con = db()
+
+    if request.method == "POST":
+        username = request.form["username"].strip()
+        password = request.form["password"]
+        role = request.form["role"]
+        driver_id = request.form.get("driver_id") or None
+
+        password_hash = generate_password_hash(password)
+
+        con.execute("""
+            INSERT INTO users (username, password_hash, role, driver_id)
+            VALUES (?, ?, ?, ?)
+        """, (username, password_hash, role, driver_id))
+
+        con.commit()
+
+    users = con.execute("""
+        SELECT u.*, d.name
+        FROM users u
+        LEFT JOIN drivers d ON u.driver_id = d.id
+    """).fetchall()
+
+    drivers = con.execute("SELECT id, name FROM drivers").fetchall()
+
+    con.close()
+
+    return render_template(
+        "quan_ly_user.html",
+        users=users,
+        drivers=drivers
+    )
+# =========================
+# change password
+# =========================
+
+@app.route("/change_password", methods=["GET","POST"])
+@login_required
+def change_password():
+
+    if request.method == "POST":
+        old = request.form["old_password"]
+        new = request.form["new_password"]
+
+        con = db()
+        user = con.execute("""
+            SELECT * FROM users WHERE id=?
+        """, (session["user_id"],)).fetchone()
+
+        if not check_password_hash(user["password_hash"], old):
+            return render_template("change_password.html",
+                                   error="Mật khẩu cũ không đúng")
+
+        con.execute("""
+            UPDATE users
+            SET password_hash=?
+            WHERE id=?
+        """, (generate_password_hash(new), session["user_id"]))
+
+        con.commit()
+        con.close()
+
+        return redirect("/")
+
+    return render_template("change_password.html")
+
+# =========================
+# Sửa bảo dưỡng
+# =========================
+
+
+@app.route("/sua-bao-duong/<int:id>", methods=["GET","POST"])
+@login_required
+@admin_required
+def sua_bao_duong(id):
+
+    con = db()
+
+    if request.method == "POST":
+        con.execute("""
+            UPDATE bao_duong
+            SET loai=?, noi_dung=?, ngay_thuc_hien=?,
+                ngay_hoan_thanh=?, trang_thai=?,
+                don_vi=?, chi_phi=?, ghi_chu=?
+            WHERE id=?
+        """, (
+            request.form["loai"],
+            request.form["noi_dung"],
+            request.form["ngay_thuc_hien"],
+            request.form.get("ngay_hoan_thanh"),
+            request.form["trang_thai"],
+            request.form.get("don_vi"),
+            request.form.get("chi_phi") or 0,
+            request.form.get("ghi_chu"),
+            id
+        ))
+
+        con.commit()
+        con.close()
+        return redirect("/lich-su-bao-duong")
+
+    data = con.execute(
+        "SELECT * FROM bao_duong WHERE id=?",
+        (id,)
+    ).fetchone()
+
+    con.close()
+
+    return render_template("sua_bao_duong.html", data=data)
+
+# =========================
+# Xóa bảo dưỡng
+# =========================
+
+
+@app.route("/xoa-bao-duong/<int:id>")
+@login_required
+@admin_required
+def xoa_bao_duong(id):
+
+    con = db()
+    con.execute("DELETE FROM bao_duong WHERE id=?", (id,))
+    con.commit()
+    con.close()
+
+    return redirect("/lich-su-bao-duong")
+
+# =========================
+# Sửa đăng kiểm
+# =========================
+
+
+@app.route("/sua-dang-kiem/<int:id>", methods=["GET","POST"])
+@login_required
+@admin_required
+def sua_dang_kiem(id):
+
+    con = db()
+
+    if request.method == "POST":
+        con.execute("""
+            UPDATE dang_kiem
+            SET so_dang_ky=?, loai=?, ngay_dang_ky=?,
+                ngay_het_han=?, trung_tam=?, chi_phi=?, ghi_chu=?
+            WHERE id=?
+        """, (
+            request.form["so_dang_ky"],
+            request.form["loai"],
+            request.form["ngay_dang_ky"],
+            request.form["ngay_het_han"],
+            request.form.get("trung_tam"),
+            request.form.get("chi_phi") or 0,
+            request.form.get("ghi_chu"),
+            id
+        ))
+
+        con.commit()
+        con.close()
+        return redirect("/lich-su-dang-kiem")
+
+    data = con.execute(
+        "SELECT * FROM dang_kiem WHERE id=?",
+        (id,)
+    ).fetchone()
+
+    con.close()
+
+    return render_template("sua_dang_kiem.html", data=data)
+
+# =========================
+# Xóa đăng kiểm
+# =========================
+
+@app.route("/xoa-dang-kiem/<int:id>")
+@login_required
+@admin_required
+def xoa_dang_kiem(id):
+
+    con = db()
+    con.execute("DELETE FROM dang_kiem WHERE id=?", (id,))
+    con.commit()
+    con.close()
+
+    return redirect("/lich-su-dang-kiem")
+
+
+
+# =========================
+# THỐNG KÊ
+# =========================
+@app.route("/thong-ke")
+@login_required
+@admin_required
+def thong_ke():
+
+    con = db()
+
+    danh_sach_xe = con.execute("""
+        SELECT DISTINCT plate FROM trip_history ORDER BY plate
+    """).fetchall()
+
+    danh_sach_taixe = con.execute("""
+        SELECT DISTINCT driver_name FROM trip_history ORDER BY driver_name
+    """).fetchall()
+
+    tu_ngay = request.args.get("tu_ngay")
+    den_ngay = request.args.get("den_ngay")
+    xe = request.args.get("xe")
+    taixe = request.args.get("taixe")
+    export = request.args.get("export")
+
+    ket_qua = []
+    co_dieu_kien = any([tu_ngay, den_ngay, xe, taixe])
+
+    tong_km = 0
+    tong_chuyen = 0
+    tong_phut = 0
+
+    bieu_do = defaultdict(lambda: {"km": 0, "chuyen": 0})
+
+    if co_dieu_kien:
+
+        sql = """
+            SELECT plate, driver_name, work_content,
+                   start_time, end_time,
+                   duration_minutes,
+                   km_travel
+            FROM trip_history
+            WHERE 1=1
+        """
+        params = []
+
+        if tu_ngay:
+            sql += " AND DATE(start_time) >= ?"
+            params.append(tu_ngay)
+
+        if den_ngay:
+            sql += " AND DATE(start_time) <= ?"
+            params.append(den_ngay)
+
+        if xe:
+            sql += " AND plate = ?"
+            params.append(xe)
+
+        if taixe:
+            sql += " AND driver_name = ?"
+            params.append(taixe)
+
+        sql += " ORDER BY start_time DESC"
+
+        ket_qua = con.execute(sql, params).fetchall()
+
+        # ================================
+        # TÍNH TỔNG HỢP
+        # ================================
+        for r in ket_qua:
+
+            km = r["km_travel"] or 0
+            phut = r["duration_minutes"] or 0
+
+            tong_km += km
+            tong_phut += phut
+            tong_chuyen += 1
+
+            thang = r["start_time"][:7]  # YYYY-MM
+            bieu_do[thang]["km"] += km
+            bieu_do[thang]["chuyen"] += 1
+
+        # ================================
+        # XUẤT EXCEL
+        # ================================
+        if export == "excel" and ket_qua:
+
+            wb = Workbook()
+            ws = wb.active
+            ws.title = "ThongKeDieuXe"
+
+            headers = [
+                "Xe",
+                "Tài xế",
+                "Nội dung công tác",
+                "Giờ đi",
+                "Giờ về",
+                "KM",
+                "Thời gian (phút)"
+            ]
+
+            ws.append(headers)
+
+            for col in range(1, len(headers) + 1):
+                ws.cell(row=1, column=col).font = Font(bold=True)
+
+            for r in ket_qua:
+                ws.append([
+                    r["plate"],
+                    r["driver_name"],
+                    r["work_content"],
+                    r["start_time"],
+                    r["end_time"],
+                    r["km_travel"] or 0,
+                    r["duration_minutes"] or 0
+                ])
+
+            output = BytesIO()
+            wb.save(output)
+            output.seek(0)
+
+            con.close()
+
+            return send_file(
+                output,
+                download_name="thong_ke_dieu_xe.xlsx",
+                as_attachment=True,
+                mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+
+    # ================================
+    # SAU KHI XỬ LÝ XONG
+    # ================================
+    con.close()
+
+    tong_gio = round(tong_phut / 60, 2)
+
+    thang_labels = sorted(bieu_do.keys())
+    data_km = [bieu_do[t]["km"] for t in thang_labels]
+    data_chuyen = [bieu_do[t]["chuyen"] for t in thang_labels]
+
+    return render_template(
+        "thong_ke.html",
+        danh_sach_xe=danh_sach_xe,
+        danh_sach_taixe=danh_sach_taixe,
+        ket_qua=ket_qua,
+        tu_ngay=tu_ngay,
+        den_ngay=den_ngay,
+        xe=xe,
+        taixe=taixe,
+        co_dieu_kien=co_dieu_kien,
+        tong_km=tong_km,
+        tong_chuyen=tong_chuyen,
+        tong_gio=tong_gio,
+        thang_labels=thang_labels,
+        data_km=data_km,
+        data_chuyen=data_chuyen
+    )
+
+    # ================================
+    # lấy webhook
+    # ================================
+
+
+# =========================
+# ZALO BOT WEBHOOK
+# =========================
+@app.route("/zalo-webhook", methods=["POST"])
+def zalo_webhook():
+
+    secret_header = request.headers.get("X-Bot-Api-Secret-Token")
+    my_secret = os.getenv("ZALO_SECRET_TOKEN")
+
+    if secret_header != my_secret:
+        return "Unauthorized", 403
+
+    data = request.json
+
+    if data.get("event_name") != "message.text.received":
+        return "OK"
+
+    user_id = data["message"]["from"]["id"]
+    text = data["message"]["text"].strip().lower()
+
+    print("User:", user_id)
+    print("Raw text:", text)
+
+    con = db()
+
+    # =========================
+    # LỆNH KETNOI
+    # =========================
+    if text.startswith("ketnoi"):
+
+        parts = text.split(" ")
+
+        if len(parts) < 2:
+
+            gui_zalo_cho_taixe(
+                user_id,
+                "📱 Cú pháp đúng:\nketnoi 0905086253"
+            )
+
+            con.close()
+            return "OK"
+
+        phone = parts[1]
+
+        # chuẩn hóa số điện thoại
+        phone = phone.replace(" ", "").replace(".", "").replace("-", "")
+
+        print("Phone cleaned:", phone)
+
+        driver = con.execute("""
+            SELECT id,name
+            FROM drivers
+            WHERE phone = ?
+        """, (phone,)).fetchone()
+
+        if driver:
+
+            con.execute("""
+                UPDATE drivers
+                SET zalo_user_id = ?
+                WHERE id = ?
+            """, (user_id, driver["id"]))
+
+            con.commit()
+
+            gui_zalo_cho_taixe(
+                user_id,
+                "✅ Đã liên kết Zalo với hệ thống điều xe."
+            )
+
+            print("Đã cập nhật Zalo ID cho:", driver["name"])
+
+        else:
+
+            gui_zalo_cho_taixe(
+                user_id,
+                "❌ Số điện thoại chưa có trong hệ thống."
+            )
+
+        con.close()
+        return "OK"
+
+    # =========================
+    # TRƯỜNG HỢP GỬI SỐ ĐIỆN THOẠI TRỰC TIẾP
+    # =========================
+
+    phone = text.replace(" ", "").replace(".", "").replace("-", "")
+
+    if phone.isdigit():
+
+        driver = con.execute("""
+            SELECT id,name
+            FROM drivers
+            WHERE phone = ?
+        """, (phone,)).fetchone()
+
+        if driver:
+
+            con.execute("""
+                UPDATE drivers
+                SET zalo_user_id = ?
+                WHERE id = ?
+            """, (user_id, driver["id"]))
+
+            con.commit()
+
+            gui_zalo_cho_taixe(
+                user_id,
+                "✅ Đã liên kết Zalo với hệ thống điều xe."
+            )
+
+            print("Đã cập nhật Zalo ID cho:", driver["name"])
+
+        else:
+
+            gui_zalo_cho_taixe(
+                user_id,
+                "❌ Số điện thoại chưa có trong hệ thống."
+            )
+
+    else:
+
+        gui_zalo_cho_taixe(
+            user_id,
+            "📱 Gửi số điện thoại hoặc:\nketnoi 0905086253"
+        )
+
+    con.close()
+
+    return "OK"
+
+
+# =========================
+# TELEGRAM BOT WEBHOOK
+# =========================
+@app.route("/telegram-webhook", methods=["POST"])
+def telegram_webhook():
+
+    try:
+
+        data = request.get_json(force=True)
+
+        print("Telegram update:", data)
+
+        if "message" not in data:
+            return "OK"
+
+        message = data["message"]
+
+        if "text" not in message:
+            return "OK"
+
+        chat_id = message["chat"]["id"]
+        text = message["text"].strip().lower()
+
+        print("Telegram chat_id:", chat_id)
+        print("Raw text:", text)
+
+        con = db()
+
+        # =================================
+        # KIỂM TRA ADMIN
+        # =================================
+
+        admin = con.execute("""
+            SELECT id
+            FROM bot_admins
+            WHERE telegram_id=?
+        """,(chat_id,)).fetchone()
+
+        is_admin = True if admin else False
+ 	
+# =================================
+# ADMIN XEM DANH SÁCH XE ĐANG CHẠY
+# =================================
+
+if text == "/dsxe":
+
+    if not is_admin:
+        send_telegram(chat_id,"❌ Bạn không có quyền.")
+        con.close()
+        return "OK"
+
+    rows = con.execute("""
+        SELECT v.plate,
+               d.name,
+               v.work_content
+        FROM vehicles v
+        LEFT JOIN drivers d ON v.driver_id = d.id
+        WHERE v.status = 1
+    """).fetchall()
+
+    if not rows:
+
+        send_telegram(chat_id,"🚗 Hiện không có xe nào đang hoạt động.")
+        con.close()
+        return "OK"
+
+    msg = "🚗 DANH SÁCH XE ĐANG HOẠT ĐỘNG\n\n"
+
+    for r in rows:
+
+        msg += (
+            f"Xe: {r['plate']}\n"
+            f"Tài xế: {r['name']}\n"
+            f"Nội dung: {r['work_content']}\n\n"
+        )
+
+    send_telegram(chat_id,msg)
+
+    con.close()
+    return "OK"
+# =================================
+	# ADMIN XEM DANH SÁCH XE RÃNH
+	# =================================
+
+        if text == "/dsxe":
+
+            if not is_admin:
+                 send_telegram(chat_id,"❌ Bạn không có quyền.")
+                 con.close()
+                 return "OK"
+
+            rows = con.execute("""
+                 SELECT v.plate,
+                        d.name,
+                        v.work_content
+                 FROM vehicles v
+                 LEFT JOIN drivers d ON v.driver_id = d.id
+                 WHERE v.status = 0
+                 """).fetchall()
+
+            if not rows:
+
+                send_telegram(chat_id,"🚗 Hiện không có xe nào rãnh.")
+                con.close()
+                return "OK"
+
+            msg = "🚗 DANH SÁCH XE ĐANG RÃNH\n\n"
+
+            for r in rows:
+
+               msg += (
+                   f"Xe: {r['plate']}\n"
+               
+               )
+
+            send_telegram(chat_id,msg)
+
+            con.close()
+            return "OK"
+
+
+        # =================================
+# ADMIN XEM TÀI XẾ RẢNH
+# =================================
+
+if text == "/taixeranh":
+
+    if not is_admin:
+
+        send_telegram(chat_id,"❌ Bạn không có quyền.")
+        con.close()
+        return "OK"
+
+    rows = con.execute("""
+        SELECT d.name, d.phone
+        FROM drivers d
+        WHERE d.id NOT IN (
+            SELECT driver_id
+            FROM vehicles
+            WHERE status = 1 AND driver_id IS NOT NULL
+        )
+        ORDER BY d.name
+    """).fetchall()
+
+    if not rows:
+
+        send_telegram(chat_id,"⚠️ Không có tài xế rảnh.")
+        con.close()
+        return "OK"
+
+    msg = "👨‍✈️ DANH SÁCH TÀI XẾ RẢNH\n\n"
+
+    for r in rows:
+
+        msg += (
+            f"Tài xế: {r['name']}\n"
+            f"SĐT: {r['phone']}\n\n"
+        )
+
+    send_telegram(chat_id,msg)
+
+    con.close()
+    return "OK"
+        # =================================
+        # BOT ĐIỀU XE AI (ADMIN)
+        # =================================
+
+        if text.startswith("dieuxe"):
+
+            if not is_admin:
+
+                send_telegram(chat_id,"❌ Bạn không có quyền điều xe")
+                con.close()
+                return "OK"
+
+            try:
+
+                parts = text.split(" ")
+
+                plate = None
+                phone = None
+                work_content = ""
+
+                for p in parts:
+
+                    if p.startswith("dieuxe: "):
+                        plate = p.replace("dieuxe:","").upper()
+
+                    if p.startswith("taixe: "):
+                        phone = p.replace("taixe:","")
+
+                    if p.startswith("noidung:"):
+                        work_content = p.replace("noidung: ","")
+
+                if not plate or not phone or not work_content:
+
+                    send_telegram(
+                        chat_id,
+                        "⚠️ Cú pháp:\n"
+                        "dieuxe: 94A-001.88 taixe: 0905086253 noidung: Đi công tác"
+                    )
+
+                    con.close()
+                    return "OK"
+
+                vehicle = con.execute("""
+                    SELECT *
+                    FROM vehicles
+                    WHERE plate=?
+                """,(plate,)).fetchone()
+
+                if not vehicle:
+
+                    send_telegram(chat_id,"❌ Không tìm thấy xe")
+                    con.close()
+                    return "OK"
+
+                if vehicle["status"] == 1:
+
+                    send_telegram(chat_id,"⚠️ Xe đang hoạt động")
+                    con.close()
+                    return "OK"
+
+                driver = con.execute("""
+                    SELECT *
+                    FROM drivers
+                    WHERE phone=?
+                """,(phone,)).fetchone()
+
+                if not driver:
+
+                    send_telegram(chat_id,"❌ Không tìm thấy tài xế")
+                    con.close()
+                    return "OK"
+
+                start_time = datetime.now().isoformat()
+
+                con.execute("""
+                    UPDATE vehicles
+                    SET status=1,
+                        driver_id=?,
+                        start_time=?,
+                        work_content=?
+                    WHERE id=?
+                """,(driver["id"],start_time,work_content,vehicle["id"]))
+
+                con.commit()
+
+                send_telegram(
+                    chat_id,
+                    f"""✅ ĐÃ ĐIỀU XE
+
+Xe: {plate}
+Tài xế: {driver['name']}
+Nội dung: {work_content}
+"""
+                )
+
+                noi_dung = f"""
+🚗 THÔNG BÁO ĐIỀU XE
+
+Xe: {plate}
+Tài xế: {driver['name']}
+Thời gian: {datetime.now().strftime("%H:%M %d/%m/%Y")}
+
+Nội dung:
+{work_content}
+
+Vui lòng thực hiện theo phân công.
+"""
+
+                if driver["telegram_chat_id"]:
+                    send_telegram(driver["telegram_chat_id"], noi_dung)
+
+                if driver["zalo_user_id"]:
+                    gui_zalo_cho_taixe(driver["zalo_user_id"], noi_dung)
+
+                con.close()
+                return "OK"
+
+            except Exception as e:
+
+                print("AI dieu xe error:",e)
+                send_telegram(chat_id,"❌ Lỗi hệ thống")
+                con.close()
+                return "OK"
+
+
+
+        # =================================
+        # KẾT NỐI TELEGRAM
+        # =================================
+
+        if text.startswith("ketnoi"):
+
+            parts = text.split(" ")
+
+            if len(parts) < 2:
+
+                send_telegram(chat_id,"📱 Cú pháp: ketnoi 0905086253")
+                con.close()
+                return "OK"
+
+            phone = parts[1]
+
+            driver = con.execute("""
+                SELECT id,name
+                FROM drivers
+                WHERE phone=?
+            """,(phone,)).fetchone()
+
+            if driver:
+
+                con.execute("""
+                    UPDATE drivers
+                    SET telegram_chat_id=?
+                    WHERE id=?
+                """,(chat_id,driver["id"]))
+
+                con.commit()
+
+                send_telegram(
+                    chat_id,
+                    "✅ Đã liên kết Telegram với hệ thống điều xe."
+                )
+
+            else:
+
+                send_telegram(chat_id,"❌ Số điện thoại chưa có trong hệ thống")
+
+            con.close()
+            return "OK"
+
+
+
+        # =================================
+        # TÀI XẾ XÁC NHẬN LỆNH
+        # =================================
+
+        if text == "nhan":
+
+            driver = con.execute("""
+                SELECT id
+                FROM drivers
+                WHERE telegram_chat_id=?
+            """,(chat_id,)).fetchone()
+
+            if not driver:
+
+                send_telegram(chat_id,"❌ Bạn chưa liên kết Telegram")
+                con.close()
+                return "OK"
+
+            trip = con.execute("""
+                SELECT id
+                FROM vehicles
+                WHERE driver_id=? AND status=1
+            """,(driver["id"],)).fetchone()
+
+            if not trip:
+
+                send_telegram(chat_id,"⚠️ Không có lệnh điều xe")
+                con.close()
+                return "OK"
+
+            con.execute("""
+                UPDATE vehicles
+                SET driver_confirm=1
+                WHERE id=?
+            """,(trip["id"],))
+
+            con.commit()
+
+            
+            # thông báo cho tài xế
+            send_telegram(
+                chat_id,
+                f"✅ {driver['name']} đã xác nhận nhận lệnh điều xe.\n🚗 Xe: {trip['plate']}"
+            )
+
+            print(f"Tài xế {driver['name']} đã xác nhận lệnh xe {trip['plate']}")
+            con.close()
+            return "OK"
+
+
+
+        # =================================
+        # TÀI XẾ HOÀN THÀNH CHUYẾN
+        # =================================
+
+        if text.startswith("xong"):
+
+            parts = text.split(" ")
+
+            if len(parts) < 2:
+
+                send_telegram(chat_id,"⚠️ Cú pháp: xong 35")
+                con.close()
+                return "OK"
+
+            km = int(parts[1])
+
+            driver = con.execute("""
+                SELECT id,name
+                FROM drivers
+                WHERE telegram_chat_id=?
+            """,(chat_id,)).fetchone()
+
+            if not driver:
+
+                send_telegram(chat_id,"❌ Bạn chưa liên kết Telegram")
+                con.close()
+                return "OK"
+
+            trip = con.execute("""
+                SELECT *
+                FROM vehicles
+                WHERE driver_id=? AND status=1
+            """,(driver["id"],)).fetchone()
+
+            if not trip:
+
+                send_telegram(chat_id,"⚠️ Không có chuyến xe đang chạy")
+                con.close()
+                return "OK"
+
+            msg_time = message.get("date")
+
+            end_time = datetime.fromtimestamp(msg_time).isoformat()
+
+            start_dt = datetime.fromisoformat(trip["start_time"])
+            end_dt = datetime.fromtimestamp(msg_time)
+
+            duration_minutes = int((end_dt-start_dt).total_seconds()/60)
+
+            con.execute("""
+                INSERT INTO trip_history
+                (vehicle_id,plate,driver_name,
+                 start_time,end_time,
+                 duration_minutes,work_content,km_travel)
+                VALUES (?,?,?,?,?,?,?,?)
+            """,(
+                trip["id"],
+                trip["plate"],
+                driver["name"],
+                trip["start_time"],
+                end_time,
+                duration_minutes,
+                trip["work_content"],
+                km
+            ))
+
+            new_km = (trip["km"] or 0) + km
+
+            con.execute("""
+                UPDATE vehicles
+                SET km=?,
+                    status=0,
+                    driver_id=NULL,
+                    start_time=NULL,
+                    end_time=NULL,
+                    work_content=NULL
+                WHERE id=?
+            """,(new_km,trip["id"]))
+
+            con.commit()
+
+            send_telegram(
+                chat_id,
+                f"""✅ ĐÃ HOÀN THÀNH CHUYẾN
+
+🚗 Xe: {trip['plate']}
+🛣 KM: {km} km
+⏱ Thời gian chạy: {duration_minutes} phút
+"""
+            )
+
+            con.close()
+            return "OK"
+
+
+
+        # =================================
+        # KHÔNG NHẬN DIỆN LỆNH
+        # =================================
+
+        send_telegram(
+            chat_id,
+            "📱 Lệnh hỗ trợ:\n"
+            "ketnoi 0905xxxx\n"
+            "nhan\n"
+            "xong 35"
+        )
+
+        con.close()
+
+        return "OK"
+
+    except Exception as e:
+
+        print("Telegram webhook error:",e)
+
+        return "OK"
+# =========================
+# ZALO CHO TAI XE (ĐÃ TỐI ƯU HÓA)
+# =========================
+def gui_zalo_cho_taixe(chat_id, noi_dung):
+
+    BOT_TOKEN = os.getenv("ZALO_BOT_TOKEN")
+
+    url = f"https://bot-api.zaloplatforms.com/bot{BOT_TOKEN}/sendMessage"
+
+    payload = {
+        "chat_id": chat_id,
+        "text": noi_dung
+    }
+
+    headers = {
+        "Content-Type": "application/json"
+    }
+
+    try:
+
+        r = requests.post(
+            url,
+            json=payload,
+            headers=headers,
+            timeout=10
+        )
+
+        print("Zalo status:", r.status_code)
+        print("Zalo response:", r.text)
+
+        if r.status_code == 200:
+            res = r.json()
+            return res.get("ok", False)
+
+        return False
+
+    except Exception as e:
+        print("❌ Lỗi gửi Zalo:", e)
+        return False
+# =========================
+# telegram CHO TAI XE (ĐÃ TỐI ƯU HÓA)
+# =========================
+
+def send_telegram(chat_id, message):
+
+    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+
+    payload = {
+        "chat_id": chat_id,
+        "text": message,
+        "parse_mode": "HTML"
+    }
+
+    try:
+
+        r = requests.post(url, json=payload, timeout=10)
+
+        print("Telegram status:", r.status_code)
+        print("Telegram response:", r.text)
+
+        return r.status_code == 200
+
+    except Exception as e:
+
+        print("Telegram error:", e)
+        return False
+# =========================
+# CHẠY APP
+# =========================
+if __name__ == "__main__":
+     app.run(host="0.0.0.0", port=5000, debug=True)
+    
