@@ -90,7 +90,7 @@ app.permanent_session_lifetime = timedelta(minutes=15)
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax",
-    SESSION_COOKIE_SECURE=False  # True nếu chạy HTTPS
+    SESSION_COOKIE_SECURE=True  # True nếu chạy HTTPS
 )
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 ZALO_BOT_TOKEN = os.getenv("ZALO_BOT_TOKEN")
@@ -2592,6 +2592,7 @@ if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
 
     app.run(host="0.0.0.0", port=port, debug=False)
+
 
 
 
