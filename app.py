@@ -1972,7 +1972,8 @@ def telegram_webhook():
             return "OK"
 
         chat_id = message["chat"]["id"]
-        text = message["text"].strip().lower()
+        text = message["text"].strip()
+        cmd = text.lower()
         ai = ai_parse_command(text)
         print("Telegram chat_id:", chat_id)
         print("Raw text:", text)
@@ -1987,7 +1988,7 @@ def telegram_webhook():
             SELECT id
             FROM bot_admins
             WHERE telegram_id=?
-        """,(str(chat_id),)).fetchone()
+        """,(chat_id,)).fetchone()
 
         is_admin = True if admin else False
 
@@ -2034,7 +2035,7 @@ def telegram_webhook():
         # ADMIN XEM DANH SÁCH XE RÃNH
         # =================================
 
-        if text == "/dsxeranh":
+        if cmd == "/dsxeranh":
 
             if not is_admin:
                 send_telegram(chat_id,"❌ Bạn không có quyền.")
@@ -2066,7 +2067,7 @@ def telegram_webhook():
         # ADMIN XEM TÀI XẾ RẢNH
         # =================================
 
-        if text == "/taixeranh":
+        if cmd == "/taixeranh":
 
             if not is_admin:
                 send_telegram(chat_id,"❌ Bạn không có quyền.")
@@ -2250,7 +2251,7 @@ Nội dung: {work_content}
         # DANH SÁCH TÀI XẾ
         # =================================
 
-        if text == "/taixe":
+        if cmd == "/taixe":
 
             rows = con.execute("""
                 SELECT d.name, v.plate
@@ -2277,7 +2278,7 @@ Nội dung: {work_content}
         # THỐNG KÊ
         # =================================
 
-        if text == "/thongke":
+        if cmd == "/thongke":
 
             xe_chay = con.execute("""
                 SELECT COUNT(*)
@@ -2450,7 +2451,7 @@ Nội dung: {content}
         # TÀI XẾ XÁC NHẬN LỆNH
         # =================================
 
-        if text == "nhan":
+        if cmd == "nhan":
 
             driver = con.execute("""
                 SELECT id, name
@@ -2465,7 +2466,7 @@ Nội dung: {content}
                 return "OK"
 
             trip = con.execute("""
-                SELECT id
+                SELECT id, plate
                 FROM vehicles
                 WHERE driver_id=? AND status=1
             """,(driver["id"],)).fetchone()
@@ -2736,6 +2737,7 @@ if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
 
     app.run(host="0.0.0.0", port=port, debug=False)
+
 
 
 
