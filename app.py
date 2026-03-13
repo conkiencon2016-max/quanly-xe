@@ -1987,7 +1987,7 @@ def telegram_webhook():
             SELECT id
             FROM bot_admins
             WHERE telegram_id=?
-        """,(chat_id,)).fetchone()
+        """,(str(chat_id),)).fetchone()
 
         is_admin = True if admin else False
 
@@ -2453,7 +2453,7 @@ Nội dung: {content}
         if text == "nhan":
 
             driver = con.execute("""
-                SELECT id
+                SELECT id, name
                 FROM drivers
                 WHERE telegram_chat_id=?
             """,(chat_id,)).fetchone()
