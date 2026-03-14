@@ -1,3 +1,4 @@
+
 from flask import Flask, render_template, request, redirect, session
 import sqlite3
 from datetime import datetime, date, timedelta
@@ -15,7 +16,9 @@ from zalo_service import handle_message
 from io import BytesIO
 from collections import defaultdict
 import re
-
+import threading
+import shutil
+import datetime
 def ai_parse_command(text):
 
     text = text.lower()
@@ -1987,7 +1990,7 @@ def telegram_webhook():
             SELECT id
             FROM bot_admins
             WHERE telegram_id=?
-        """,(str(chat_id),)).fetchone()
+        """,(chat_id,)).fetchone()
 
         is_admin = True if admin else False
 
@@ -2465,7 +2468,7 @@ Nội dung: {content}
                 return "OK"
 
             trip = con.execute("""
-                SELECT id
+                SELECT id, plate
                 FROM vehicles
                 WHERE driver_id=? AND status=1
             """,(driver["id"],)).fetchone()
@@ -2617,6 +2620,27 @@ Nội dung: {content}
         return "OK"
 
 
+
+def safe_send(func,*args,**kwargs):
+    try:
+        return func(*args,**kwargs)
+    except Exception as e:
+        print("BOT ERROR:",e)
+        return False
+
+
+def notify_driver(phone,telegram_id,zalo_id,message):
+
+    ok=False
+
+    if telegram_id:
+        ok = safe_send(send_telegram,telegram_id,message)
+
+    if not ok and zalo_id:
+        ok = safe_send(gui_zalo_cho_taixe,zalo_id,message)
+
+    if not ok and phone:
+        safe_send(send_sms,phone,message)
 # =========================
 # ZALO CHO TAI XE (ĐÃ TỐI ƯU HÓA)
 # =========================
@@ -2711,6 +2735,7 @@ def dashboard_data():
     con.close()
 
     return {"data": data}
+
 # =========================
 # sao lưu dữ liệu
 # =========================
@@ -2738,6 +2763,123 @@ if __name__ == "__main__":
     app.run(host="0.0.0.0", port=port, debug=False)
 
 
+def auto_backup():
+
+    while True:
+
+        try:
+            shutil.copy("fleet.db","backup/fleet_backup.db")
+        except Exception as e:
+            print("backup error",e)
+
+        time.sleep(86400)
+
+threading.Thread(target=auto_backup,daemon=True).start()
 
 
 
+
+# =========================
+# ===== SYSTEM PATCH =====
+# Non-breaking stability additions for Render
+# =========================
+
+import threading, shutil, datetime, os, time
+
+# ---------- Safe SMS ----------
+def send_sms(phone, message):
+    SMS_API = os.getenv("SMS_API")
+    SMS_SECRET = os.getenv("SMS_SECRET")
+
+    if not SMS_API:
+        print("SMS API chưa cấu hình")
+        return False
+
+    payload = {
+        "phone": phone,
+        "message": message,
+        "secret": SMS_SECRET
+    }
+
+    try:
+        r = requests.post(SMS_API, json=payload, timeout=10)
+        print("SMS status:", r.status_code)
+        return r.status_code == 200
+    except Exception as e:
+        print("SMS error:", e)
+        return False
+
+
+# ---------- Safe notify ----------
+def notify_driver(phone, telegram_id, zalo_id, message):
+
+    ok = False
+
+    try:
+        if telegram_id:
+            ok = send_telegram(telegram_id, message)
+    except:
+        ok = False
+
+    if not ok:
+        try:
+            if zalo_id:
+                ok = gui_zalo_cho_taixe(zalo_id, message)
+        except:
+            ok = False
+
+    if not ok and phone:
+        send_sms(phone, message)
+
+
+# ---------- Auto Backup ----------
+def auto_backup():
+
+    backup_dir = "backup"
+
+    try:
+        os.makedirs(backup_dir, exist_ok=True)
+    except:
+        pass
+
+    while True:
+
+        try:
+
+            today = datetime.date.today().isoformat()
+
+            dst = os.path.join(backup_dir, f"fleet_{today}.db")
+
+            if os.path.exists("fleet.db"):
+                shutil.copy("fleet.db", dst)
+                print("Backup OK:", dst)
+
+        except Exception as e:
+
+            print("Backup error:", e)
+
+        time.sleep(86400)
+
+
+threading.Thread(
+    target=auto_backup,
+    daemon=True
+).start()
+
+
+# ---------- Keep Render Awake ----------
+def keep_alive():
+    while True:
+        try:
+            requests.get("http://localhost:10000/ping", timeout=10)
+        except:
+            pass
+        time.sleep(300)
+
+threading.Thread(
+    target=keep_alive,
+    daemon=True
+).start()
+
+
+print("=== Fleet Management System Ready ===")
