@@ -2124,13 +2124,13 @@ def telegram_webhook():
                 for p in parts:
 
                     if p.startswith("dieuxe:"):
-                        plate = p.replace("dieuxe:","").strip().upper()
+                        plate = p.replace("dieuxe ","").strip().upper()
 
                     if p.startswith("taixe:"):
-                        phone = p.replace("taixe:","").strip()
+                        phone = p.replace("taixe ","").strip()
 
                     if p.startswith("noidung:"):
-                        work_content = p.replace("noidung:","").strip()
+                        work_content = p.replace("noidung ","").strip()
 
                 if not plate or not phone or not work_content:
 
@@ -2598,8 +2598,8 @@ Nội dung: {content}
         send_telegram(
             chat_id,
             "📱 Lệnh hỗ trợ:\n"
-            "/dsxe\n"
-            "/dsxeranh\n"
+            "/xechay\n"
+            "/xeranh\n"
             "/taixeranh\n"
             "/xe 94A-001.88\n"
             "/taixe\n"
