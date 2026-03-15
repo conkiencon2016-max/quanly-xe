@@ -18,6 +18,7 @@ from collections import defaultdict
 import re
 import threading
 import shutil
+import datetime
 def ai_parse_command(text):
 
     text = text.lower()
@@ -100,7 +101,7 @@ ZALO_BOT_TOKEN = os.getenv("ZALO_BOT_TOKEN")
 # KẾT NỐI DATABASE
 # =========================
 def db():
-    con = sqlite3.connect("fleet.db", check_same_thread=False)
+    con = sqlite3.connect("fleet.db")
     con.row_factory = sqlite3.Row
     return con
 
@@ -2513,13 +2514,7 @@ Nội dung: {content}
                 con.close()
                 return "OK"
 
-            try:
-                km = int(parts[1])
-            except:
-                send_telegram(chat_id,"⚠️ KM không hợp lệ")
-                con.close()
-                return "OK"
-
+            km = int(parts[1])
 
             driver = con.execute("""
                 SELECT id,name
@@ -2782,109 +2777,3 @@ def auto_backup():
 threading.Thread(target=auto_backup,daemon=True).start()
 
 
-
-
-# =========================
-# ===== SYSTEM PATCH =====
-# Non-breaking stability additions for Render
-# =========================
-
-import threading, shutil, datetime, os, time
-
-# ---------- Safe SMS ----------
-def send_sms(phone, message):
-    SMS_API = os.getenv("SMS_API")
-    SMS_SECRET = os.getenv("SMS_SECRET")
-
-    if not SMS_API:
-        print("SMS API chưa cấu hình")
-        return False
-
-    payload = {
-        "phone": phone,
-        "message": message,
-        "secret": SMS_SECRET
-    }
-
-    try:
-        r = requests.post(SMS_API, json=payload, timeout=10)
-        print("SMS status:", r.status_code)
-        return r.status_code == 200
-    except Exception as e:
-        print("SMS error:", e)
-        return False
-
-
-# ---------- Safe notify ----------
-def notify_driver(phone, telegram_id, zalo_id, message):
-
-    ok = False
-
-    try:
-        if telegram_id:
-            ok = send_telegram(telegram_id, message)
-    except:
-        ok = False
-
-    if not ok:
-        try:
-            if zalo_id:
-                ok = gui_zalo_cho_taixe(zalo_id, message)
-        except:
-            ok = False
-
-    if not ok and phone:
-        send_sms(phone, message)
-
-
-# ---------- Auto Backup ----------
-def auto_backup():
-
-    backup_dir = "backup"
-
-    try:
-        os.makedirs(backup_dir, exist_ok=True)
-    except:
-        pass
-
-    while True:
-
-        try:
-
-            today = datetime.date.today().isoformat()
-
-            dst = os.path.join(backup_dir, f"fleet_{today}.db")
-
-            if os.path.exists("fleet.db"):
-                shutil.copy("fleet.db", dst)
-                print("Backup OK:", dst)
-
-        except Exception as e:
-
-            print("Backup error:", e)
-
-        time.sleep(86400)
-
-
-threading.Thread(
-    target=auto_backup,
-    daemon=True
-).start()
-
-
-# ---------- Keep Render Awake ----------
-def keep_alive():
-    while True:
-        try:
-            requests.get("http://localhost:10000/ping", timeout=10)
-        except:
-            pass
-        time.sleep(300)
-
-threading.Thread(
-    target=keep_alive,
-    daemon=True
-).start()
-
-
-print("=== Fleet Management System Ready ===")
