@@ -18,7 +18,6 @@ from collections import defaultdict
 import re
 import threading
 import shutil
-import datetime
 def ai_parse_command(text):
 
     text = text.lower()
@@ -101,7 +100,7 @@ ZALO_BOT_TOKEN = os.getenv("ZALO_BOT_TOKEN")
 # KẾT NỐI DATABASE
 # =========================
 def db():
-    con = sqlite3.connect("fleet.db")
+    con = sqlite3.connect("fleet.db", check_same_thread=False)
     con.row_factory = sqlite3.Row
     return con
 
@@ -2514,7 +2513,13 @@ Nội dung: {content}
                 con.close()
                 return "OK"
 
-            km = int(parts[1])
+            try:
+                km = int(parts[1])
+            except:
+                send_telegram(chat_id,"⚠️ KM không hợp lệ")
+                con.close()
+                return "OK"
+
 
             driver = con.execute("""
                 SELECT id,name
