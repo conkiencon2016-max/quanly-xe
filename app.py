@@ -1,4 +1,3 @@
-
 from flask import Flask, render_template, request, redirect, session
 import sqlite3
 from datetime import datetime, date, timedelta
@@ -16,9 +15,7 @@ from zalo_service import handle_message
 from io import BytesIO
 from collections import defaultdict
 import re
-import threading
-import shutil
-import datetime
+
 def ai_parse_command(text):
 
     text = text.lower()
@@ -2449,150 +2446,6 @@ Nội dung: {content}
 
             con.close()
             return "OK"
-     # =================================
-        # TÀI XẾ XÁC NHẬN LỆNH
-        # =================================
-
-        if text == "nhan":
-
-            driver = con.execute("""
-                SELECT id, name
-                FROM drivers
-                WHERE telegram_chat_id=?
-            """,(chat_id,)).fetchone()
-
-            if not driver:
-
-                send_telegram(chat_id,"❌ Bạn chưa liên kết Telegram")
-                con.close()
-                return "OK"
-
-            trip = con.execute("""
-                SELECT id, plate
-                FROM vehicles
-                WHERE driver_id=? AND status=1
-            """,(driver["id"],)).fetchone()
-
-            if not trip:
-
-                send_telegram(chat_id,"⚠️ Không có lệnh điều xe")
-                con.close()
-                return "OK"
-
-            con.execute("""
-                UPDATE vehicles
-                SET driver_confirm=1
-                WHERE id=?
-            """,(trip["id"],))
-
-            con.commit()
-
-            
-            # thông báo cho tài xế
-            send_telegram(
-                chat_id,
-                f"✅ {driver['name']} đã xác nhận nhận lệnh điều xe.\n🚗 Xe: {trip['plate']}"
-            )
-
-            print(f"Tài xế {driver['name']} đã xác nhận lệnh xe {trip['plate']}")
-            con.close()
-            return "OK"
-
-
-
-        # =================================
-        # TÀI XẾ HOÀN THÀNH CHUYẾN
-        # =================================
-
-        if text.startswith("xong"):
-
-            parts = text.split(" ")
-
-            if len(parts) < 2:
-
-                send_telegram(chat_id,"⚠️ Cú pháp: xong 35")
-                con.close()
-                return "OK"
-
-            km = int(parts[1])
-
-            driver = con.execute("""
-                SELECT id,name
-                FROM drivers
-                WHERE telegram_chat_id=?
-            """,(chat_id,)).fetchone()
-
-            if not driver:
-
-                send_telegram(chat_id,"❌ Bạn chưa liên kết Telegram")
-                con.close()
-                return "OK"
-
-            trip = con.execute("""
-                SELECT *
-                FROM vehicles
-                WHERE driver_id=? AND status=1
-            """,(driver["id"],)).fetchone()
-
-            if not trip:
-
-                send_telegram(chat_id,"⚠️ Không có chuyến xe đang chạy")
-                con.close()
-                return "OK"
-
-            msg_time = message.get("date")
-
-            end_time = datetime.fromtimestamp(msg_time).isoformat()
-
-            start_dt = datetime.fromisoformat(trip["start_time"])
-            end_dt = datetime.fromtimestamp(msg_time)
-
-            duration_minutes = int((end_dt-start_dt).total_seconds()/60)
-
-            con.execute("""
-                INSERT INTO trip_history
-                (vehicle_id,plate,driver_name,
-                 start_time,end_time,
-                 duration_minutes,work_content,km_travel)
-                VALUES (?,?,?,?,?,?,?,?)
-            """,(
-                trip["id"],
-                trip["plate"],
-                driver["name"],
-                trip["start_time"],
-                end_time,
-                duration_minutes,
-                trip["work_content"],
-                km
-            ))
-
-            new_km = (trip["km"] or 0) + km
-
-            con.execute("""
-                UPDATE vehicles
-                SET km=?,
-                    status=0,
-                    driver_id=NULL,
-                    start_time=NULL,
-                    end_time=NULL,
-                    work_content=NULL
-                WHERE id=?
-            """,(new_km,trip["id"]))
-
-            con.commit()
-
-            send_telegram(
-                chat_id,
-                f"""✅ ĐÃ HOÀN THÀNH CHUYẾN
-
-🚗 Xe: {trip['plate']}
-🛣 KM: {km} km
-⏱ Thời gian chạy: {duration_minutes} phút
-"""
-            )
-
-            con.close()
-            return "OK"
 
         # =================================
         # KHÔNG NHẬN DIỆN LỆNH
@@ -2601,8 +2454,8 @@ Nội dung: {content}
         send_telegram(
             chat_id,
             "📱 Lệnh hỗ trợ:\n"
-            "/xechay\n"
-            "/xeranh\n"
+            "/dsxe\n"
+            "/dsxeranh\n"
             "/taixeranh\n"
             "/xe 94A-001.88\n"
             "/taixe\n"
@@ -2613,34 +2466,13 @@ Nội dung: {content}
         con.close()
 
         return "OK"
-    except Exception as e:
+except Exception as e:
 
         print("Telegram webhook error:", e)
 
         return "OK"
 
 
-
-def safe_send(func,*args,**kwargs):
-    try:
-        return func(*args,**kwargs)
-    except Exception as e:
-        print("BOT ERROR:",e)
-        return False
-
-
-def notify_driver(phone,telegram_id,zalo_id,message):
-
-    ok=False
-
-    if telegram_id:
-        ok = safe_send(send_telegram,telegram_id,message)
-
-    if not ok and zalo_id:
-        ok = safe_send(gui_zalo_cho_taixe,zalo_id,message)
-
-    if not ok and phone:
-        safe_send(send_sms,phone,message)
 # =========================
 # ZALO CHO TAI XE (ĐÃ TỐI ƯU HÓA)
 # =========================
@@ -2735,6 +2567,83 @@ def dashboard_data():
     con.close()
 
     return {"data": data}
+# =========================
+# tạo trang yêu cầu
+# =========================
+
+@app.route("/yeu-cau-dieu-xe", methods=["GET", "POST"])
+@login_required
+def yeu_cau_dieu_xe():
+    con = db()
+
+    if request.method == "POST":
+        con.execute("""
+            INSERT INTO yeu_cau_xe (
+                nguoi_yeu_cau, chuc_vu, so_hanh_khach,
+                muc_dich, diem_don, diem_den,
+                ngay_di, ngay_ve
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            request.form["nguoi_yeu_cau"],
+            request.form["chuc_vu"],
+            request.form["so_hanh_khach"],
+            request.form["muc_dich"],
+            request.form["diem_don"],
+            request.form["diem_den"],
+            request.form["ngay_di"],
+            request.form["ngay_ve"]
+        ))
+        con.commit()
+        return redirect("/danh-sach-yeu-cau")
+
+    return render_template("yeu_cau_dieu_xe.html")
+
+# =========================
+# danh sách yêu cầu
+# =========================
+
+
+@app.route("/danh-sach-yeu-cau")
+@login_required
+def danh_sach_yeu_cau():
+    con = db()
+
+    data = con.execute("""
+        SELECT * FROM yeu_cau_xe
+        ORDER BY created_at DESC
+    """).fetchall()
+
+    return render_template("danh_sach_yeu_cau.html", data=data)
+# =========================
+# xử lý yêu cầu
+# =========================
+
+@app.route("/xu-ly-yeu-cau/<int:id>", methods=["POST"])
+@login_required
+@admin_required
+def xu_ly_yeu_cau(id):
+    con = db()
+
+    yc = con.execute("""
+        SELECT * FROM yeu_cau_xe WHERE id=?
+    """, (id,)).fetchone()
+
+    if not yc:
+        return "Không tìm thấy yêu cầu", 404
+
+    # 👉 cập nhật trạng thái
+    con.execute("""
+        UPDATE yeu_cau_xe
+        SET trang_thai='da_duyet'
+        WHERE id=?
+    """, (id,))
+
+    con.commit()
+    con.close()
+
+    # 👉 CHUYỂN SANG TRANG ĐIỀU XE + ĐỔ DATA
+    return redirect(f"/dieu-xe?auto_fill={id}")
 
 # =========================
 # sao lưu dữ liệu
@@ -2761,19 +2670,4 @@ if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
 
     app.run(host="0.0.0.0", port=port, debug=False)
-
-
-def auto_backup():
-
-    while True:
-
-        try:
-            shutil.copy("fleet.db","backup/fleet_backup.db")
-        except Exception as e:
-            print("backup error",e)
-
-        time.sleep(86400)
-
-threading.Thread(target=auto_backup,daemon=True).start()
-
 
