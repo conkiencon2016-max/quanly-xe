@@ -1,3 +1,6 @@
+<div class="card p-3 mb-4">
+<h5>📝 Tạo yêu cầu điều xe</h5>
+
 <form method="POST">
 
 <div class="row">
@@ -12,13 +15,25 @@
     </div>
 </div>
 
-<label>Số hành khách</label>
-<input name="so_hanh_khach" type="number" class="form-control">
+<div class="row mt-2">
+    <div class="col">
+        <label>Số hành khách</label>
+        <input name="so_hanh_khach" type="number" class="form-control">
+    </div>
+    <div class="col">
+        <label>Ngày đi</label>
+        <input type="datetime-local" name="ngay_di" class="form-control">
+    </div>
+    <div class="col">
+        <label>Ngày về</label>
+        <input type="datetime-local" name="ngay_ve" class="form-control">
+    </div>
+</div>
 
-<label>Mục đích</label>
+<label class="mt-2">Mục đích</label>
 <textarea name="muc_dich" class="form-control"></textarea>
 
-<div class="row">
+<div class="row mt-2">
     <div class="col">
         <label>Điểm đón</label>
         <input name="diem_don" class="form-control">
@@ -30,18 +45,42 @@
     </div>
 </div>
 
-<div class="row">
-    <div class="col">
-        <label>Ngày đi</label>
-        <input type="datetime-local" name="ngay_di" class="form-control">
-    </div>
-
-    <div class="col">
-        <label>Ngày về</label>
-        <input type="datetime-local" name="ngay_ve" class="form-control">
-    </div>
-</div>
-
-<button class="btn btn-primary mt-3">Gửi yêu cầu</button>
+<button class="btn btn-primary mt-3">➕ Gửi yêu cầu</button>
 
 </form>
+</div>
+
+<!-- DANH SÁCH -->
+<div class="card p-3">
+<h5>📋 Danh sách yêu cầu</h5>
+
+<table class="table table-hover">
+<thead>
+<tr>
+    <th>#</th>
+    <th>Người</th>
+    <th>Trạng thái</th>
+    <th>Điểm</th>
+    <th>Thời gian</th>
+</tr>
+</thead>
+
+<tbody>
+{% for r in data %}
+<tr>
+    <td>{{ loop.index }}</td>
+    <td>{{ r.nguoi_yeu_cau }}</td>
+    <td>
+        {% if r.trang_thai == "cho_duyet" %}
+        <span class="badge bg-warning">Chờ duyệt</span>
+        {% else %}
+        <span class="badge bg-success">Đã duyệt</span>
+        {% endif %}
+    </td>
+    <td>{{ r.diem_don }} → {{ r.diem_den }}</td>
+    <td>{{ r.ngay_di }}</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
