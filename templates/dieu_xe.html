@@ -357,14 +357,11 @@ input[type="number"] {
             </select>
 
             <input type="datetime-local" name="start_time" required>
-            value="{% if yeu_cau %}{{ yeu_cau.ngay_di }}{% endif %}">
+            
 
             <textarea name="work_content" rows="2"
                 placeholder="Nhập nội dung công tác..." required>
 
-            {% if yeu_cau %}
-            {{ yeu_cau.muc_dich }} - {{ yeu_cau.diem_don }} → {{ yeu_cau.diem_den }}
-            {% endif %}   
             </textarea>
 
             <button class="start" type="submit">Điều xe</button>
