@@ -2270,10 +2270,10 @@ def dashboard_data():
 # =========================
 # tạo trang yêu cầu
 # =========================
-
 @app.route("/yeu-cau-dieu-xe", methods=["GET", "POST"])
 @login_required
 def yeu_cau_dieu_xe():
+
     con = db()
 
     if request.method == "POST":
@@ -2295,18 +2295,25 @@ def yeu_cau_dieu_xe():
             request.form["ngay_ve"]
         ))
         con.commit()
-        return redirect("/danh-sach-yeu-cau")
 
-    return render_template("yeu_cau_dieu_xe.html")
+    data = con.execute("""
+        SELECT * FROM yeu_cau_xe
+        ORDER BY created_at DESC
+    """).fetchall()
+
+    con.close()
+
+    return render_template("yeu_cau_dieu_xe.html", data=data)
 
 # =========================
 # danh sách yêu cầu
 # =========================
 
 
-@app.route("/danh-sach-yeu-cau")
+pp.route("/danh-sach-yeu-cau")
 @login_required
 def danh_sach_yeu_cau():
+
     con = db()
 
     data = con.execute("""
@@ -2314,7 +2321,32 @@ def danh_sach_yeu_cau():
         ORDER BY created_at DESC
     """).fetchall()
 
-    return render_template("danh_sach_yeu_cau.html", data=data)
+    # 👉 lấy xe rảnh
+    vehicles = con.execute("""
+        SELECT id, plate
+        FROM vehicles
+        WHERE status = 0
+    """).fetchall()
+
+    # 👉 tài xế rảnh
+    drivers = con.execute("""
+        SELECT id, name
+        FROM drivers
+        WHERE id NOT IN (
+            SELECT driver_id FROM vehicles
+            WHERE status=1 AND driver_id IS NOT NULL
+        )
+    """).fetchall()
+
+    con.close()
+
+    return render_template(
+        "danh_sach_yeu_cau.html",
+        data=data,
+        vehicles=vehicles,
+        drivers=drivers
+    )
+
 # =========================
 # xử lý yêu cầu
 # =========================
@@ -2323,6 +2355,7 @@ def danh_sach_yeu_cau():
 @login_required
 @admin_required
 def xu_ly_yeu_cau(id):
+
     con = db()
 
     yc = con.execute("""
@@ -2332,7 +2365,31 @@ def xu_ly_yeu_cau(id):
     if not yc:
         return "Không tìm thấy yêu cầu", 404
 
-    # 👉 cập nhật trạng thái
+    vehicle_id = request.form.get("vehicle_id")
+    driver_id = request.form.get("driver_id")
+
+    if not vehicle_id or not driver_id:
+        return "Thiếu xe hoặc tài xế", 400
+
+    # =========================
+    # CẬP NHẬT XE
+    # =========================
+    start_time = yc["ngay_di"] or datetime.now().isoformat()
+
+    work_content = f"{yc['muc_dich']} - {yc['diem_don']} → {yc['diem_den']}"
+
+    con.execute("""
+        UPDATE vehicles
+        SET status=1,
+            driver_id=?,
+            start_time=?,
+            work_content=?
+        WHERE id=?
+    """, (driver_id, start_time, work_content, vehicle_id))
+
+    # =========================
+    # CẬP NHẬT YÊU CẦU
+    # =========================
     con.execute("""
         UPDATE yeu_cau_xe
         SET trang_thai='da_duyet'
@@ -2342,8 +2399,7 @@ def xu_ly_yeu_cau(id):
     con.commit()
     con.close()
 
-    # 👉 CHUYỂN SANG TRANG ĐIỀU XE + ĐỔ DATA
-    return redirect(f"/dieu-xe?auto_fill={id}")
+    return redirect("/danh-sach-yeu-cau")
 
 # =========================
 # sao lưu dữ liệu
