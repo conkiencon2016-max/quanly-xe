@@ -174,7 +174,20 @@ def home():
 def dieu_xe():
     con = db()
 
-    # ===== THỐNG KÊ DASHBOARD =====
+    # =========================
+    # AUTO FILL TỪ YÊU CẦU
+    # =========================
+    auto_id = request.args.get("auto_fill")
+    yeu_cau = None
+
+    if auto_id:
+        yeu_cau = con.execute("""
+            SELECT * FROM yeu_cau_xe WHERE id=?
+        """, (auto_id,)).fetchone()
+
+    # =========================
+    # DASHBOARD
+    # =========================
     tong_xe = con.execute(
         "SELECT COUNT(*) FROM vehicles"
     ).fetchone()[0]
@@ -187,7 +200,9 @@ def dieu_xe():
         "SELECT COUNT(*) FROM vehicles WHERE status = 0"
     ).fetchone()[0]
 
-    # ===== LỌC THEO DASHBOARD =====
+    # =========================
+    # FILTER
+    # =========================
     filter_status = request.args.get("status")
 
     sql_filter = ""
@@ -198,7 +213,9 @@ def dieu_xe():
     elif filter_status == "home":
         sql_filter = "WHERE vehicles.status = 0"
 
-    # ===== LẤY DANH SÁCH XE =====
+    # =========================
+    # LẤY XE
+    # =========================
     vehicles_raw = con.execute(f"""
         SELECT
             vehicles.id,
@@ -213,26 +230,31 @@ def dieu_xe():
         {sql_filter}
     """, params).fetchall()
 
-    # ===== TÀI XẾ CHƯA BẬN =====
+    # =========================
+    # DRIVER RẢNH
+    # =========================
     busy_drivers = con.execute("""
         SELECT driver_id
         FROM vehicles
         WHERE status = 1 AND driver_id IS NOT NULL
     """).fetchall()
 
-    busy_driver_ids = [d["driver_id"] for d in busy_drivers]
+    busy_ids = [d["driver_id"] for d in busy_drivers]
 
-    if busy_driver_ids:
-        placeholders = ",".join("?" * len(busy_driver_ids))
+    if busy_ids:
+        placeholders = ",".join("?" * len(busy_ids))
         drivers = con.execute(
             f"SELECT id, name FROM drivers WHERE id NOT IN ({placeholders})",
-            busy_driver_ids
+            busy_ids
         ).fetchall()
     else:
         drivers = con.execute(
             "SELECT id, name FROM drivers"
         ).fetchall()
 
+    # =========================
+    # FORMAT DATA
+    # =========================
     vehicles = []
 
     for v in vehicles_raw:
@@ -246,13 +268,6 @@ def dieu_xe():
             end_dt = datetime.fromisoformat(v["end_time"])
             end = end_dt.strftime("%d/%m/%Y")
 
-        if v["start_time"] and v["end_time"]:
-            diff = end_dt - start_dt
-            total_minutes = int(diff.total_seconds() / 60)
-            hours = total_minutes // 60
-            minutes = total_minutes % 60
-            duration = f"{hours} giờ {minutes} phút" if hours > 0 else f"{minutes} phút"
-
         vehicles.append((
             v["id"],
             v["plate"],
@@ -264,15 +279,17 @@ def dieu_xe():
             v["work_content"]
         ))
 
+    con.close()
+
     return render_template(
         "dieu_xe.html",
         vehicles=vehicles,
         drivers=drivers,
         tong_xe=tong_xe,
         xe_hoat_dong=xe_hoat_dong,
-        xe_o_nha=xe_o_nha
+        xe_o_nha=xe_o_nha,
+        yeu_cau=yeu_cau   # 🔥 QUAN TRỌNG
     )
-
 # =========================
 # RA BÃI
 # =========================
@@ -1974,45 +1991,40 @@ def telegram_webhook():
         chat_id = message["chat"]["id"]
         text = message["text"].strip().lower()
         ai = ai_parse_command(text)
+
         print("Telegram chat_id:", chat_id)
         print("Raw text:", text)
 
         con = db()
 
-        # =================================
+        # =========================
         # KIỂM TRA ADMIN
-        # =================================
-
+        # =========================
         admin = con.execute("""
-            SELECT id
-            FROM bot_admins
-            WHERE telegram_id=?
-        """,(chat_id,)).fetchone()
+            SELECT id FROM bot_admins WHERE telegram_id=?
+        """, (chat_id,)).fetchone()
 
         is_admin = True if admin else False
 
-        # =================================
-        # ADMIN XEM DANH SÁCH XE ĐANG CHẠY
-        # =================================
-
+        # =========================
+        # /dsxe
+        # =========================
         if text == "/dsxe":
 
             if not is_admin:
-                send_telegram(chat_id,"❌ Bạn không có quyền.")
+                send_telegram(chat_id, "❌ Bạn không có quyền.")
                 con.close()
                 return "OK"
 
             rows = con.execute("""
-                SELECT v.plate,
-                       d.name,
-                       v.work_content
+                SELECT v.plate, d.name, v.work_content
                 FROM vehicles v
                 LEFT JOIN drivers d ON v.driver_id = d.id
                 WHERE v.status = 1
             """).fetchall()
 
             if not rows:
-                send_telegram(chat_id,"🚗 Hiện không có xe nào đang hoạt động.")
+                send_telegram(chat_id, "🚗 Hiện không có xe nào đang hoạt động.")
                 con.close()
                 return "OK"
 
@@ -2025,30 +2037,26 @@ def telegram_webhook():
                     f"Nội dung: {r['work_content']}\n\n"
                 )
 
-            send_telegram(chat_id,msg)
-
+            send_telegram(chat_id, msg)
             con.close()
             return "OK"
 
-        # =================================
-        # ADMIN XEM DANH SÁCH XE RÃNH
-        # =================================
-
+        # =========================
+        # /dsxeranh
+        # =========================
         if text == "/dsxeranh":
 
             if not is_admin:
-                send_telegram(chat_id,"❌ Bạn không có quyền.")
+                send_telegram(chat_id, "❌ Bạn không có quyền.")
                 con.close()
                 return "OK"
 
             rows = con.execute("""
-                SELECT plate
-                FROM vehicles
-                WHERE status = 0
+                SELECT plate FROM vehicles WHERE status = 0
             """).fetchall()
 
             if not rows:
-                send_telegram(chat_id,"🚗 Hiện không có xe nào rãnh.")
+                send_telegram(chat_id, "🚗 Hiện không có xe nào rãnh.")
                 con.close()
                 return "OK"
 
@@ -2057,19 +2065,17 @@ def telegram_webhook():
             for r in rows:
                 msg += f"Xe: {r['plate']}\n"
 
-            send_telegram(chat_id,msg)
-
+            send_telegram(chat_id, msg)
             con.close()
             return "OK"
 
-        # =================================
-        # ADMIN XEM TÀI XẾ RẢNH
-        # =================================
-
+        # =========================
+        # /taixeranh
+        # =========================
         if text == "/taixeranh":
 
             if not is_admin:
-                send_telegram(chat_id,"❌ Bạn không có quyền.")
+                send_telegram(chat_id, "❌ Bạn không có quyền.")
                 con.close()
                 return "OK"
 
@@ -2085,171 +2091,22 @@ def telegram_webhook():
             """).fetchall()
 
             if not rows:
-                send_telegram(chat_id,"⚠️ Không có tài xế rảnh.")
+                send_telegram(chat_id, "⚠️ Không có tài xế rảnh.")
                 con.close()
                 return "OK"
 
             msg = "👨‍✈️ DANH SÁCH TÀI XẾ RẢNH\n\n"
 
             for r in rows:
-                msg += (
-                    f"Tài xế: {r['name']}\n"
-                    f"SĐT: {r['phone']}\n\n"
-                )
+                msg += f"Tài xế: {r['name']}\nSĐT: {r['phone']}\n\n"
 
-            send_telegram(chat_id,msg)
-
+            send_telegram(chat_id, msg)
             con.close()
             return "OK"
 
-        # =================================
-        # BOT ĐIỀU XE AI (ADMIN)
-        # =================================
-
-        if text.startswith("dieuxe"):
-
-            if not is_admin:
-                send_telegram(chat_id,"❌ Bạn không có quyền điều xe")
-                con.close()
-                return "OK"
-
-            try:
-
-                parts = text.split(" ")
-
-                plate = None
-                phone = None
-                work_content = ""
-
-                for p in parts:
-
-                    if p.startswith("dieuxe:"):
-                        plate = p.replace("dieuxe:","").strip().upper()
-
-                    if p.startswith("taixe:"):
-                        phone = p.replace("taixe:","").strip()
-
-                    if p.startswith("noidung:"):
-                        work_content = p.replace("noidung:","").strip()
-
-                if not plate or not phone or not work_content:
-
-                    send_telegram(
-                        chat_id,
-                        "⚠️ Cú pháp:\n"
-                        "dieuxe:94A-001.88 taixe:0905086253 noidung:Đi công tác"
-                    )
-
-                    con.close()
-                    return "OK"
-
-                vehicle = con.execute("""
-                    SELECT *
-                    FROM vehicles
-                    WHERE plate=?
-                """,(plate,)).fetchone()
-
-                if not vehicle:
-                    send_telegram(chat_id,"❌ Không tìm thấy xe")
-                    con.close()
-                    return "OK"
-
-                if vehicle["status"] == 1:
-                    send_telegram(chat_id,"⚠️ Xe đang hoạt động")
-                    con.close()
-                    return "OK"
-
-                driver = con.execute("""
-                    SELECT *
-                    FROM drivers
-                    WHERE phone=?
-                """,(phone,)).fetchone()
-
-                if not driver:
-                    send_telegram(chat_id,"❌ Không tìm thấy tài xế")
-                    con.close()
-                    return "OK"
-
-                start_time = datetime.now().isoformat()
-
-                con.execute("""
-                    UPDATE vehicles
-                    SET status=1,
-                        driver_id=?,
-                        start_time=?,
-                        work_content=?
-                    WHERE id=?
-                """,(driver["id"],start_time,work_content,vehicle["id"]))
-
-                con.commit()
-
-                send_telegram(
-                    chat_id,
-                    f"""✅ ĐÃ ĐIỀU XE
-
-Xe: {plate}
-Tài xế: {driver['name']}
-Nội dung: {work_content}
-"""
-                )
-
-                con.close()
-                return "OK"
-
-            except Exception as e:
-
-                print("AI dieu xe error:",e)
-                send_telegram(chat_id,"❌ Lỗi hệ thống")
-                con.close()
-                return "OK"
-
-        # =================================
-        # KẾT NỐI TELEGRAM
-        # =================================
-
-        if text.startswith("ketnoi"):
-
-            parts = text.split(" ")
-
-            if len(parts) < 2:
-                send_telegram(chat_id,"📱 Cú pháp: ketnoi 0905086253")
-                con.close()
-                return "OK"
-
-            phone = parts[1]
-
-            driver = con.execute("""
-                SELECT id,name
-                FROM drivers
-                WHERE phone=?
-            """,(phone,)).fetchone()
-
-            if driver:
-
-                con.execute("""
-                    UPDATE drivers
-                    SET telegram_chat_id=?
-                    WHERE id=?
-                """,(chat_id,driver["id"]))
-
-                con.commit()
-
-                send_telegram(
-                    chat_id,
-                    "✅ Đã liên kết Telegram với hệ thống điều xe."
-                )
-
-            else:
-                send_telegram(chat_id,"❌ Số điện thoại chưa có trong hệ thống")
-
-            con.close()
-            return "OK"
-            
-    
-    # =================================
-        # DANH SÁCH TÀI XẾ
-        # =================================
-
+        # =========================
+        # /taixe
+        # =========================
         if text == "/taixe":
 
             rows = con.execute("""
@@ -2262,41 +2119,27 @@ Nội dung: {work_content}
             msg = "👨‍✈️ TÀI XẾ\n\n"
 
             for r in rows:
-
                 if r["plate"]:
                     msg += f"{r['name']} → 🚗 {r['plate']}\n"
                 else:
                     msg += f"{r['name']} → rảnh\n"
 
-            send_telegram(chat_id,msg)
-
+            send_telegram(chat_id, msg)
             con.close()
             return "OK"
 
-        # =================================
-        # THỐNG KÊ
-        # =================================
-
+        # =========================
+        # /thongke
+        # =========================
         if text == "/thongke":
 
-            xe_chay = con.execute("""
-                SELECT COUNT(*)
-                FROM vehicles
-                WHERE status=1
-            """).fetchone()[0]
-
-            xe_ranh = con.execute("""
-                SELECT COUNT(*)
-                FROM vehicles
-                WHERE status=0
-            """).fetchone()[0]
+            xe_chay = con.execute("SELECT COUNT(*) FROM vehicles WHERE status=1").fetchone()[0]
+            xe_ranh = con.execute("SELECT COUNT(*) FROM vehicles WHERE status=0").fetchone()[0]
 
             taixe_ranh = con.execute("""
-                SELECT COUNT(*)
-                FROM drivers
+                SELECT COUNT(*) FROM drivers
                 WHERE id NOT IN (
-                    SELECT driver_id
-                    FROM vehicles
+                    SELECT driver_id FROM vehicles
                     WHERE status=1 AND driver_id IS NOT NULL
                 )
             """).fetchone()[0]
@@ -2306,172 +2149,29 @@ Nội dung: {work_content}
 
 🚗 Xe đang chạy: {xe_chay}
 🚗 Xe rảnh: {xe_ranh}
-
 👨‍✈️ Tài xế rảnh: {taixe_ranh}
 """
 
-            send_telegram(chat_id,msg)
-
+            send_telegram(chat_id, msg)
             con.close()
             return "OK"
 
-        # =================================
-        # XEM TRẠNG THÁI XE
-        # =================================
-
-        if text.startswith("/xe"):
-
-            parts = text.split(" ")
-
-            if len(parts) < 2:
-                send_telegram(chat_id,"⚠️ Cú pháp: /xe 94A-001.88")
-                con.close()
-                return "OK"
-
-            plate = parts[1].upper()
-
-            vehicle = con.execute("""
-                SELECT v.plate, v.status, d.name
-                FROM vehicles v
-                LEFT JOIN drivers d ON v.driver_id=d.id
-                WHERE v.plate=?
-            """,(plate,)).fetchone()
-
-            if not vehicle:
-                send_telegram(chat_id,"❌ Không tìm thấy xe")
-                con.close()
-                return "OK"
-
-            if vehicle["status"] == 1:
-
-                msg = f"""
-🚗 XE ĐANG HOẠT ĐỘNG
-
-Xe: {vehicle['plate']}
-Tài xế: {vehicle['name']}
-"""
-
-            else:
-
-                msg = f"""
-🚗 XE ĐANG RÃNH
-
-Xe: {vehicle['plate']}
-"""
-
-            send_telegram(chat_id,msg)
-
-            con.close()
-            return "OK"
-
-        # =================================
-        # AI ĐIỀU XE TIẾNG VIỆT
-        # =================================
-
-        if ai["intent"] == "dieuxe":
-
-            if not is_admin:
-
-                send_telegram(chat_id,"❌ Bạn không có quyền điều xe")
-                con.close()
-                return "OK"
-
-            plate = ai["plate"]
-            phone = ai["phone"]
-            content = ai["content"]
-
-            if not plate or not phone:
-
-                send_telegram(
-                    chat_id,
-                    "⚠️ Ví dụ:\n"
-                    "điều xe 94A-001.88 cho 0905086253 đi công tác"
-                )
-
-                con.close()
-                return "OK"
-
-            vehicle = con.execute("""
-                SELECT *
-                FROM vehicles
-                WHERE plate=?
-            """,(plate,)).fetchone()
-
-            if not vehicle:
-
-                send_telegram(chat_id,"❌ Không tìm thấy xe")
-                con.close()
-                return "OK"
-
-            if vehicle["status"] == 1:
-
-                send_telegram(chat_id,"⚠️ Xe đang hoạt động")
-                con.close()
-                return "OK"
-
-            driver = con.execute("""
-                SELECT *
-                FROM drivers
-                WHERE phone=?
-            """,(phone,)).fetchone()
-
-            if not driver:
-
-                send_telegram(chat_id,"❌ Không tìm thấy tài xế")
-                con.close()
-                return "OK"
-
-            start_time = datetime.now().isoformat()
-
-            con.execute("""
-                UPDATE vehicles
-                SET status=1,
-                    driver_id=?,
-                    start_time=?,
-                    work_content=?
-                WHERE id=?
-            """,(driver["id"],start_time,content,vehicle["id"]))
-
-            con.commit()
-
-            send_telegram(
-                chat_id,
-                f"""🤖 AI ĐÃ ĐIỀU XE
-
-Xe: {plate}
-Tài xế: {driver['name']}
-Nội dung: {content}
-"""
-            )
-
-            con.close()
-            return "OK"
-
-        # =================================
-        # KHÔNG NHẬN DIỆN LỆNH
-        # =================================
-
+        # =========================
+        # KHÔNG NHẬN DIỆN
+        # =========================
         send_telegram(
             chat_id,
             "📱 Lệnh hỗ trợ:\n"
-            "/dsxe\n"
-            "/dsxeranh\n"
-            "/taixeranh\n"
-            "/xe 94A-001.88\n"
-            "/taixe\n"
-            "/thongke\n"
-            "ketnoi 0905xxxx"
+            "/dsxe\n/dsxeranh\n/taixeranh\n"
+            "/xe 94A-001.88\n/taixe\n/thongke\nketnoi 0905xxxx"
         )
 
         con.close()
-
         return "OK"
-except Exception as e:
 
+    except Exception as e:
         print("Telegram webhook error:", e)
-
         return "OK"
-
 
 # =========================
 # ZALO CHO TAI XE (ĐÃ TỐI ƯU HÓA)
