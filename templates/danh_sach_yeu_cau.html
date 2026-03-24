@@ -1,4 +1,24 @@
-<table class="table table-bordered">
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Danh sách yêu cầu</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+<div class="overlay">
+
+<a href="/" class="back-link">⬅ Trang chủ</a>
+
+<div class="header">
+    <h2>📋 DANH SÁCH YÊU CẦU ĐIỀU XE</h2>
+</div>
+
+<div class="card">
+
+<table>
 <thead>
 <tr>
     <th>#</th>
@@ -16,55 +36,64 @@
 <tbody>
 {% for r in data %}
 <tr>
-    <td>{{ loop.index }}</td>
-    <td>{{ r.nguoi_yeu_cau }}</td>
 
-    <td>
+<td>{{ loop.index }}</td>
+<td>{{ r.nguoi_yeu_cau }}</td>
+
+<td>
+{% if r.trang_thai == "cho_duyet" %}
+<span style="color:#F59E0B;font-weight:600">🟡 Chờ duyệt</span>
+{% else %}
+<span style="color:#16A34A;font-weight:600">🟢 Đã duyệt</span>
+{% endif %}
+</td>
+
+<td>{{ r.so_hanh_khach }}</td>
+<td>{{ r.diem_don }}</td>
+<td>{{ r.diem_den }}</td>
+
+<td>
+{{ r.ngay_di }} <br>
+{{ r.ngay_ve }}
+</td>
+
+<td>{{ r.muc_dich }}</td>
+
+<td>
 {% if r.trang_thai == "cho_duyet" %}
 
 <form method="post" action="/xu-ly-yeu-cau/{{ r.id }}">
 
-<select name="vehicle_id" class="form-control mb-1" required>
+<select name="vehicle_id" required>
 <option value="">-- Chọn xe --</option>
 {% for v in vehicles %}
 <option value="{{ v.id }}">{{ v.plate }}</option>
 {% endfor %}
 </select>
 
-<select name="driver_id" class="form-control mb-1" required>
+<select name="driver_id" required>
 <option value="">-- Chọn tài xế --</option>
 {% for d in drivers %}
 <option value="{{ d.id }}">{{ d.name }}</option>
 {% endfor %}
 </select>
 
-<button class="btn btn-primary btn-sm w-100">🚗 Điều xe</button>
+<button class="btn-add">🚗 Điều xe</button>
 
 </form>
 
 {% else %}
-<span class="text-success">✔ Đã xử lý</span>
+<span class="status-on">✔ Đã xử lý</span>
 {% endif %}
 </td>
 
-    <td>{{ r.so_hanh_khach }}</td>
-    <td>{{ r.diem_don }}</td>
-    <td>{{ r.diem_den }}</td>
-
-    <td>
-        {{ r.ngay_di }} <br> {{ r.ngay_ve }}
-    </td>
-
-    <td>{{ r.muc_dich }}</td>
-
-    <td>
-        {% if r.trang_thai == "cho_duyet" %}
-        <form method="post" action="/xu-ly-yeu-cau/{{ r.id }}">
-            <button class="btn btn-success btn-sm">Duyệt</button>
-        </form>
-        {% endif %}
-    </td>
 </tr>
 {% endfor %}
 </tbody>
 </table>
+
+</div>
+
+</div>
+</body>
+</html>
