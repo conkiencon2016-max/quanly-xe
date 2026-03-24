@@ -24,11 +24,12 @@
     <th>#</th>
     <th>Người yêu cầu</th>
     <th>Trạng thái</th>
-    <th>Số khách</th>
+    <th>Số người đi</th>
     <th>Điểm đón</th>
     <th>Điểm đến</th>
-    <th>Thời gian</th>
-    <th>Mục đích</th>
+    <th>Thời gian đi</th>
+    <th>Thời gian về</th>
+    <th>Nội dung</th>
     <th>Xử lý</th>
 </tr>
 </thead>
@@ -53,7 +54,9 @@
 <td>{{ r.diem_den }}</td>
 
 <td>
-{{ r.ngay_di }} <br>
+{{ r.ngay_di }} 
+</td>
+    <td>
 {{ r.ngay_ve }}
 </td>
 
