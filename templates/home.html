@@ -27,82 +27,104 @@ body {
 /* ===== HEADER ===== */
 header {
     text-align: center;
-    padding: 16px;
-    border-radius: 12px;
-    background: rgba(255,255,255,0.95);
-   /* background: linear-gradient(
-    90deg,
-    #2C7BE5 0%,
-    #5AA9F7 45%,
-    #DCEEFF 100%
-);
-color: #FFFFFF; */
-    margin-bottom: 30px;
-    box-shadow: none;
+    padding: 20px;
+    border-radius: 16px;
+    background: linear-gradient(
+        135deg,
+        rgba(255,255,255,0.95),
+        rgba(255,255,255,0.85)
+    );
+    backdrop-filter: blur(6px);
+    margin-bottom: 35px;
 }
 
 header h1 {
-    margin: 0;
-    color: #B11226;          /* ĐỎ TRANG TRỌNG */
-    font-weight: 700;
-    letter-spacing: 0.6px;
+    color: #B11226;
+    font-weight: 800;
+    font-size: 28px;
 }
 
 header h2 {
-    margin: 6px 0 0 0;
-    font-size: 18px;
-    color: #B11226;          /* Đỏ sẫm nhẹ */
+    color: #B11226;
     font-weight: 600;
+    font-size: 16px;
 }
 
 /* ===== MENU CARD ===== */
 .menu {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-    gap: 20px;
-    max-width: 1800px;
+    gap: 24px;
+    max-width: 1400px;
     margin: auto;
 }
 
+/* CARD */
 .card {
-    background: rgba(255,255,255,0.98);
-    border-radius: 14px;
-    padding: 24px;
-    box-shadow: 0 8px 18px rgba(0,0,0,0.12);
+    background: rgba(255,255,255,0.95);
+    border-radius: 16px;
+    padding: 26px 20px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.12);
     text-align: center;
-    transition: transform 0.2s, box-shadow 0.2s;
+    transition: all 0.25s ease;
+    position: relative;
+    overflow: hidden;
 }
 
 .card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 12px 26px rgba(0,0,0,0.18);
+    transform: translateY(-6px) scale(1.02);
+    box-shadow: 0 18px 40px rgba(0,0,0,0.2);
 }
 
+/* ICON */
+.card .icon {
+    font-size: 42px;
+    margin-bottom: 12px;
+    display: block;
+}
+
+/* TITLE */
 .card h2 {
+    font-size: 20px;
+    font-weight: 700;
     color: #0F3D5E;
     margin-bottom: 16px;
 }
 
-.card p {
-    color: #374151;
-    font-size: 14px;
-    margin-bottom: 20px;
-}
-
+/* BUTTON */
 .card a {
-    display: inline-block;
-    padding: 10px 18px;
-    border-radius: 8px;
-    text-decoration: none;
+    display: block;
+    width: 100%;
+    padding: 12px;
+    border-radius: 10px;
     font-weight: 600;
+    text-decoration: none;
     color: white;
+    transition: all 0.2s ease;
 }
 
-/* ===== BUTTON ===== */
-.btn-dieuxe { background: #2563EB; }
-.btn-quanly { background: #059669; }
-.btn-thongke { background: #B45309; }
-.btn-taixe { background: #0EA5E9; }
+/* BUTTON HOVER */
+.card a:hover {
+    transform: scale(1.05);
+    opacity: 0.95;
+}
+
+/* MÀU THEO CHỨC NĂNG */
+.btn-dieuxe {
+    background: linear-gradient(135deg, #2563EB, #1D4ED8);
+}
+
+.btn-quanly {
+    background: linear-gradient(135deg, #059669, #047857);
+}
+
+.btn-thongke {
+    background: linear-gradient(135deg, #D97706, #B45309);
+}
+
+.btn-taixe {
+    background: linear-gradient(135deg, #0EA5E9, #0284C7);
+}
 
 /* ===== FOOTER MẶC ĐỊNH (PC / MOBILE) ===== */
 footer {
@@ -187,34 +209,40 @@ footer {
 {% if role == "admin" %}
     
     <!-- Điều xe -->
-    <div class="card">
-    <h2>📝 Yêu cầu điều xe</h2>
+   <div class="card">
+    <span class="icon">📝</span>
+    <h2>Yêu cầu điều xe</h2>
     <a href="/yeu-cau-dieu-xe" class="btn-dieuxe">Tạo yêu cầu</a>
 </div>
 
 <div class="card">
-    <h2>📋 Danh sách yêu cầu</h2>
+    <span class="icon">📋</span>
+    <h2>Danh sách yêu cầu</h2>
     <a href="/danh-sach-yeu-cau" class="btn-quanly">Xem danh sách</a>
 </div>
     <div class="card">
-        <h2>🚗 Điều xe</h2>
-        <a href="/dieu-xe" class="btn-dieuxe">Vào chức năng</a>
-    </div>
+    <span class="icon">🚗</span>
+    <h2>Điều xe</h2>
+    <a href="/dieu-xe" class="btn-dieuxe">Vào chức năng</a>
+</div>
+
+   <div class="card">
+    <span class="icon">📁</span>
+    <h2>Quản lý phương tiện</h2>
+    <a href="/quan-ly-xe-menu" class="btn-quanly">Vào chức năng</a>
+</div>
 
     <div class="card">
-        <h2>🗂️ Quản lý phương tiện</h2>
-        <a href="/quan-ly-xe-menu" class="btn-quanly">Vào chức năng</a>
-    </div>
+    <span class="icon">📁</span>
+    <h2>Quản lý phương tiện</h2>
+    <a href="/quan-ly-xe-menu" class="btn-quanly">Vào chức năng</a>
+</div>
 
     <div class="card">
-        <h2>👤 Quản lý tài xế</h2>
-        <a href="/quan-ly-tai-xe" class="btn-taixe">Vào chức năng</a>
-    </div>
-
-    <div class="card">
-        <h2>📊 Thống kê</h2>
-        <a href="/thong-ke" class="btn-thongke">Vào chức năng</a>
-    </div>
+    <span class="icon">👤</span>
+    <h2>Quản lý tài xế</h2>
+    <a href="/quan-ly-tai-xe" class="btn-taixe">Vào chức năng</a>
+</div>
 
 {% else %}
 
