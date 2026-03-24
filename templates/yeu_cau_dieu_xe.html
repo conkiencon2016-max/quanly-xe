@@ -34,7 +34,7 @@
     </div>
 
     <div class="filter-group">
-        <label>Số khách</label>
+        <label>Số người đi</label>
         <input type="number" name="so_hanh_khach">
     </div>
 
@@ -83,11 +83,13 @@
 <table>
 <thead>
 <tr>
-    <th>#</th>
-    <th>Người</th>
+    <th>STT</th>
+    <th>Người yêu cầu</th>
     <th>Trạng thái</th>
-    <th>Điểm</th>
-    <th>Thời gian</th>
+    <th>Điểm đón</th>
+    <th>Điểm đến</th>
+    <th>Thời gian đi</th>
+    <th>Thời gian về</th>
 </tr>
 </thead>
 
@@ -105,8 +107,10 @@
         {% endif %}
     </td>
 
-    <td>{{ r.diem_don }} → {{ r.diem_den }}</td>
+    <td>{{ r.diem_don }} </td>
+    <td>{{ r.diem_den }}</td>
     <td>{{ r.ngay_di }}</td>
+    <td>{{ r.ngay_ve }}</td>
 </tr>
 {% endfor %}
 </tbody>
