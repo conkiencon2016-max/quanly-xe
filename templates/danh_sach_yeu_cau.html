@@ -1,11 +1,149 @@
-
 <!DOCTYPE html>
 <html lang="vi">
 <head>
 <meta charset="utf-8">
 <title>Danh sách yêu cầu</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="stylesheet" href="/static/style.css">
+
+<style>
+body{
+    margin:0;
+    font-family:Segoe UI,Arial;
+    background:linear-gradient(135deg,#0f172a,#1e3a8a);
+}
+
+/* layout */
+.overlay{
+    padding:20px;
+}
+
+/* header */
+.header{
+    text-align:center;
+    margin:20px 0;
+}
+
+.header h2{
+    background:linear-gradient(90deg,#3b82f6,#06b6d4);
+    padding:14px;
+    border-radius:12px;
+    color:white;
+}
+
+/* back */
+.back-link{
+    color:#38bdf8;
+    text-decoration:none;
+    font-weight:600;
+}
+
+/* card */
+.card{
+    background:#fff;
+    border-radius:16px;
+    padding:15px;
+    box-shadow:0 10px 30px rgba(0,0,0,0.2);
+    overflow-x:auto;
+}
+
+/* table */
+table{
+    width:100%;
+    min-width:1200px; /* 🔥 FIX QUAN TRỌNG */
+    border-collapse:collapse;
+    font-size:14px;
+}
+
+th{
+    background:#f1f5f9;
+    padding:12px;
+    text-align:center;
+    font-weight:600;
+}
+
+td{
+    padding:10px;
+    text-align:center;
+    border-bottom:1px solid #eee;
+}
+
+/* zebra */
+tr:nth-child(even){
+    background:#f9fafb;
+}
+
+/* status */
+.badge{
+    padding:4px 10px;
+    border-radius:999px;
+    font-size:13px;
+    font-weight:600;
+}
+
+.wait{
+    background:#fef3c7;
+    color:#b45309;
+}
+
+.done{
+    background:#dcfce7;
+    color:#15803d;
+}
+
+/* fix nội dung dài */
+td:nth-child(5),
+td:nth-child(6),
+td:nth-child(9){
+    max-width:160px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+}
+
+/* form xử lý */
+.action-form{
+    display:flex;
+    gap:6px;
+    align-items:center;
+    justify-content:center;
+}
+
+/* select */
+select{
+    padding:5px;
+    border-radius:6px;
+    border:1px solid #ccc;
+    font-size:13px;
+}
+
+/* button */
+.btn{
+    background:#2563eb;
+    color:white;
+    border:none;
+    padding:6px 10px;
+    border-radius:6px;
+    cursor:pointer;
+    font-size:13px;
+}
+
+.btn:hover{
+    background:#1d4ed8;
+}
+
+/* trạng thái done */
+.status-on{
+    color:#16a34a;
+    font-weight:600;
+}
+
+/* responsive mobile */
+@media(max-width:768px){
+    table{
+        font-size:12px;
+    }
+}
+</style>
 </head>
 
 <body>
@@ -23,16 +161,16 @@
 <table>
 <thead>
 <tr>
-    <th>#</th>
-    <th>Người yêu cầu</th>
+    <th>STT</th>
+    <th>Người</th>
     <th>Trạng thái</th>
-    <th>Số người</th>
+    <th>Số</th>
     <th>Điểm đón</th>
     <th>Điểm đến</th>
     <th>Ngày đi</th>
     <th>Ngày về</th>
     <th>Nội dung</th>
-    <th>Xử lý</th>
+    <th style="min-width:220px">Xử lý</th> <!-- 🔥 FIX -->
 </tr>
 </thead>
 
@@ -45,20 +183,20 @@
 
 <td>
 {% if r.trang_thai == "cho_duyet" %}
-<span class="badge wait">Chờ duyệt</span>
+<span class="badge wait">Chờ</span>
 {% else %}
 <span class="badge done">Đã duyệt</span>
 {% endif %}
 </td>
 
 <td>{{ r.so_hanh_khach }}</td>
-<td>{{ r.diem_don }}</td>
-<td>{{ r.diem_den }}</td>
+<td title="{{ r.diem_don }}">{{ r.diem_don }}</td>
+<td title="{{ r.diem_den }}">{{ r.diem_den }}</td>
 
 <td>{{ r.ngay_di }}</td>
 <td>{{ r.ngay_ve }}</td>
 
-<td>{{ r.muc_dich }}</td>
+<td title="{{ r.muc_dich }}">{{ r.muc_dich }}</td>
 
 <td>
 {% if r.trang_thai == "cho_duyet" %}
