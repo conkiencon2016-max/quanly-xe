@@ -1,60 +1,86 @@
-<div class="card p-3 mb-4">
-<h5>📝 Tạo yêu cầu điều xe</h5>
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Yêu cầu điều xe</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+<div class="overlay">
+
+<a href="/" class="back-link">⬅ Trang chủ</a>
+
+<div class="header">
+    <h2>📝 YÊU CẦU ĐIỀU XE</h2>
+</div>
+
+<!-- FORM -->
+<div class="card">
 
 <form method="POST">
 
-<div class="row">
-    <div class="col">
+<div class="filter-bar">
+
+    <div class="filter-group">
         <label>Người yêu cầu</label>
-        <input name="nguoi_yeu_cau" class="form-control" required>
+        <input name="nguoi_yeu_cau" required>
     </div>
 
-    <div class="col">
+    <div class="filter-group">
         <label>Chức vụ</label>
-        <input name="chuc_vu" class="form-control">
+        <input name="chuc_vu">
     </div>
-</div>
 
-<div class="row mt-2">
-    <div class="col">
-        <label>Số hành khách</label>
-        <input name="so_hanh_khach" type="number" class="form-control">
+    <div class="filter-group">
+        <label>Số khách</label>
+        <input type="number" name="so_hanh_khach">
     </div>
-    <div class="col">
+
+    <div class="filter-group">
         <label>Ngày đi</label>
-        <input type="datetime-local" name="ngay_di" class="form-control">
+        <input type="datetime-local" name="ngay_di">
     </div>
-    <div class="col">
+
+    <div class="filter-group">
         <label>Ngày về</label>
-        <input type="datetime-local" name="ngay_ve" class="form-control">
+        <input type="datetime-local" name="ngay_ve">
     </div>
+
 </div>
 
-<label class="mt-2">Mục đích</label>
-<textarea name="muc_dich" class="form-control"></textarea>
+<div class="filter-bar">
 
-<div class="row mt-2">
-    <div class="col">
+    <div class="filter-group" style="flex:2">
+        <label>Mục đích</label>
+        <input name="muc_dich">
+    </div>
+
+    <div class="filter-group">
         <label>Điểm đón</label>
-        <input name="diem_don" class="form-control">
+        <input name="diem_don">
     </div>
 
-    <div class="col">
+    <div class="filter-group">
         <label>Điểm đến</label>
-        <input name="diem_den" class="form-control">
+        <input name="diem_den">
     </div>
+
 </div>
 
-<button class="btn btn-primary mt-3">➕ Gửi yêu cầu</button>
+<button class="btn-add">➕ Gửi yêu cầu</button>
 
 </form>
+
 </div>
 
 <!-- DANH SÁCH -->
-<div class="card p-3">
-<h5>📋 Danh sách yêu cầu</h5>
+<div class="card">
 
-<table class="table table-hover">
+<h3>📋 Danh sách yêu cầu</h3>
+
+<table>
 <thead>
 <tr>
     <th>#</th>
@@ -70,17 +96,24 @@
 <tr>
     <td>{{ loop.index }}</td>
     <td>{{ r.nguoi_yeu_cau }}</td>
+
     <td>
         {% if r.trang_thai == "cho_duyet" %}
-        <span class="badge bg-warning">Chờ duyệt</span>
+        <span style="color:#F59E0B;font-weight:600">🟡 Chờ duyệt</span>
         {% else %}
-        <span class="badge bg-success">Đã duyệt</span>
+        <span style="color:#16A34A;font-weight:600">🟢 Đã duyệt</span>
         {% endif %}
     </td>
+
     <td>{{ r.diem_don }} → {{ r.diem_den }}</td>
     <td>{{ r.ngay_di }}</td>
 </tr>
 {% endfor %}
 </tbody>
 </table>
+
 </div>
+
+</div>
+</body>
+</html>
