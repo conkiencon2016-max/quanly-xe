@@ -2310,7 +2310,7 @@ def yeu_cau_dieu_xe():
 # =========================
 
 
-pp.route("/danh-sach-yeu-cau")
+@app.route("/danh-sach-yeu-cau")
 @login_required
 def danh_sach_yeu_cau():
 
