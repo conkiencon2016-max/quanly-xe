@@ -2302,7 +2302,7 @@ def yeu_cau_dieu_xe():
         SELECT * FROM yeu_cau_xe
         ORDER BY created_at DESC
     """).fetchall()
-   tong = con.execute("SELECT COUNT(*) FROM yeu_cau_xe").fetchone()[0]
+    tong = con.execute("SELECT COUNT(*) FROM yeu_cau_xe").fetchone()[0]
 
     cho = con.execute("""
     SELECT COUNT(*) FROM yeu_cau_xe 
