@@ -2300,7 +2300,7 @@ def yeu_cau_dieu_xe():
         SELECT * FROM yeu_cau_xe
         ORDER BY created_at DESC
     """).fetchall()
-    tong = con.execute("SELECT COUNT(*) FROM yeu_cau_xe").fetchone()[0]
+   tong = con.execute("SELECT COUNT(*) FROM yeu_cau_xe").fetchone()[0]
 
     cho = con.execute("""
     SELECT COUNT(*) FROM yeu_cau_xe 
@@ -2422,6 +2422,77 @@ def xu_ly_yeu_cau(id):
 
     return redirect("/danh-sach-yeu-cau")
 
+
+# =========================
+# SỬA YÊU CẦU ĐIỀU XE
+# =========================
+@app.route("/sua-yeu-cau/<int:id>", methods=["GET", "POST"])
+@login_required
+def sua_yeu_cau(id):
+
+    con = db()
+
+    if request.method == "POST":
+        con.execute("""
+            UPDATE yeu_cau_xe
+            SET nguoi_yeu_cau=?,
+                chuc_vu=?,
+                so_hanh_khach=?,
+                ngay_di=?,
+                ngay_ve=?,
+                muc_dich=?,
+                diem_don=?,
+                diem_den=?
+            WHERE id=?
+        """, (
+            request.form["nguoi_yeu_cau"],
+            request.form.get("chuc_vu"),
+            request.form.get("so_hanh_khach"),
+            request.form.get("ngay_di"),
+            request.form.get("ngay_ve"),
+            request.form.get("muc_dich"),
+            request.form.get("diem_don"),
+            request.form.get("diem_den"),
+            id
+        ))
+
+        con.commit()
+        con.close()
+
+        return redirect("/danh-sach-yeu-cau")
+
+    data = con.execute(
+        "SELECT * FROM yeu_cau_xe WHERE id=?",
+        (id,)
+    ).fetchone()
+
+    con.close()
+
+    return render_template("sua_yeu_cau.html", data=data)
+# =========================
+# XÓA YÊU CẦU
+# =========================
+@app.route("/xoa-yeu-cau/<int:id>")
+@login_required
+def xoa_yeu_cau(id):
+
+    con = db()
+
+    # không cho xóa nếu đã điều xe
+    check = con.execute("""
+        SELECT trang_thai FROM yeu_cau_xe WHERE id=?
+    """, (id,)).fetchone()
+
+    if check and check["trang_thai"] != "cho_duyet":
+        return "Không thể xóa: yêu cầu đã duyệt", 400
+
+    con.execute("DELETE FROM yeu_cau_xe WHERE id=?", (id,))
+    con.commit()
+    con.close()
+
+    return redirect("/danh-sach-yeu-cau")
+
+
 # =========================
 # sao lưu dữ liệu
 # =========================
@@ -2447,4 +2518,3 @@ if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
 
     app.run(host="0.0.0.0", port=port, debug=False)
-
