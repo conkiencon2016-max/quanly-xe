@@ -611,7 +611,7 @@ def quan_ly_tai_xe():
                 return "Thiếu tên tài xế", 400
 
             con.execute("""
-                INSERT INTO drivers (name, phone, address, zalo_user_id)
+                INSERT INTO drivers (name, phone, address, zalo_user_id, telegram_chat_id)
                 VALUES (?, ?, ?, ?)
             """, (name, phone, address, zalo_user_id, telegram_chat_id))
 
@@ -636,6 +636,7 @@ def quan_ly_tai_xe():
             d.phone,
             d.address,
             d.zalo_user_id,
+            d.telegram_chat_id
             CASE
                 WHEN EXISTS (
                     SELECT 1 FROM vehicles v
