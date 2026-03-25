@@ -5,62 +5,152 @@
 <title>Đăng nhập Điều xe</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
 <style>
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family: 'Inter', sans-serif;
+}
+
 body{
-    font-family:"Segoe UI",Arial;
-    background:#f1f5f9;
+    background: linear-gradient(135deg, #1e3a8a, #2563eb);
+    height:100vh;
     display:flex;
     align-items:center;
     justify-content:center;
-    height:100vh;
 }
 
+/* Card */
 .card{
-    background:#fff;
-    padding:30px;
-    border-radius:16px;
-    width:360px;
-    box-shadow:0 10px 25px rgba(0,0,0,0.1);
+    background: rgba(255,255,255,0.95);
+    backdrop-filter: blur(10px);
+    width:380px;
+    padding:35px 30px;
+    border-radius:20px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.2);
     text-align:center;
+    animation: fadeIn 0.6s ease;
 }
 
+/* Animation */
+@keyframes fadeIn{
+    from{opacity:0; transform: translateY(20px);}
+    to{opacity:1; transform: translateY(0);}
+}
+
+/* Logo */
 .logo{
-    width:100px;
+    width:80px;
+    margin-bottom:10px;
+}
+
+/* Title */
+h3{
+    font-size:20px;
+    font-weight:600;
+    margin-bottom:20px;
+    color:#1e293b;
+}
+
+/* Input group */
+.input-group{
+    position:relative;
     margin-bottom:15px;
 }
 
-input{
+.input-group input{
     width:100%;
-    padding:10px;
-    margin:10px 0;
-    border:1px solid #cbd5e1;
-    border-radius:8px;
+    padding:12px 12px 12px 40px;
+    border-radius:10px;
+    border:1px solid #e2e8f0;
+    outline:none;
+    transition:0.3s;
+    font-size:14px;
 }
 
+.input-group input:focus{
+    border-color:#2563eb;
+    box-shadow:0 0 0 2px rgba(37,99,235,0.15);
+}
+
+/* Icon */
+.input-group i{
+    position:absolute;
+    left:12px;
+    top:50%;
+    transform:translateY(-50%);
+    color:#94a3b8;
+    font-size:14px;
+}
+
+/* Button */
 button{
     width:100%;
-    padding:10px;
-    background:#2563EB;
-    color:#fff;
+    padding:12px;
     border:none;
-    border-radius:8px;
+    border-radius:10px;
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    color:white;
     font-weight:600;
+    font-size:15px;
+    cursor:pointer;
+    transition:0.3s;
+}
+
+button:hover{
+    transform: translateY(-2px);
+    box-shadow:0 10px 20px rgba(37,99,235,0.3);
+}
+
+/* Footer */
+.footer{
+    margin-top:15px;
+    font-size:12px;
+    color:#64748b;
+}
+
+/* Responsive */
+@media(max-width:420px){
+    .card{
+        width:90%;
+        padding:25px;
+    }
 }
 </style>
+
+<!-- Icon -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
 </head>
 <body>
 
 <div class="card">
-    <img src="/static/logo_dieuxe.jpg" class="logo">
+    <img src="/static/LOGO_DIEUXE.png" class="logo">
+
     <h3>HỆ THỐNG ĐIỀU XE</h3>
 
     <form method="post">
-    <input type="text" name="username" placeholder="Tên đăng nhập" required>
-    <input type="password" name="password" placeholder="Mật khẩu" required>
-    <button type="submit">Đăng nhập</button>
-</form>
+
+        <div class="input-group">
+            <i class="fa fa-user"></i>
+            <input type="text" name="username" placeholder="Tên đăng nhập" required>
+        </div>
+
+        <div class="input-group">
+            <i class="fa fa-lock"></i>
+            <input type="password" name="password" placeholder="Mật khẩu" required>
+        </div>
+
+        <button type="submit">Đăng nhập</button>
+    </form>
+
+    <div class="footer">
+        © 2026 Hệ thống điều xe
+    </div>
 </div>
 
 </body>
-
 </html>
