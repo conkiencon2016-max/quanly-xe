@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -11,7 +12,49 @@ body{
     font-family:Segoe UI,Arial;
     background:linear-gradient(135deg,#0f172a,#1e3a8a);
 }
+.dashboard {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px,1fr));
+    gap: 18px;
+    margin-bottom: 20px;
+}
 
+.dash-box {
+    background: rgba(255,255,255,0.95);
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.08);
+    transition: 0.3s;
+    cursor: pointer;
+    position: relative;
+}
+
+.dash-box:hover {
+    transform: translateY(-4px);
+}
+
+.dash-title {
+    font-size: 14px;
+    color: #6B7280;
+}
+
+.dash-number {
+    font-size: 30px;
+    font-weight: 700;
+    margin-top: 6px;
+}
+
+.dash-total { border-left: 6px solid #2563EB; }
+.dash-active { border-left: 6px solid #F59E0B; }
+.dash-home { border-left: 6px solid #16A34A; }
+
+.dash-icon {
+    position: absolute;
+    right: 14px;
+    top: 14px;
+    font-size: 24px;
+    opacity: 0.25;
+}
 /* layout */
 .overlay{
     padding:20px;
@@ -155,7 +198,32 @@ select{
 <div class="header">
     <h2>📋 DANH SÁCH YÊU CẦU ĐIỀU XE</h2>
 </div>
+<div class="dashboard">
 
+    <div class="dash-box dash-total">
+    
+        <div class="dash-title">Tổng yêu cầu</div>
+        <div class="dash-number">{{ tong }}</div>
+        <div class="dash-icon">📊</div>
+    </div>
+
+    <div class="dash-box dash-active">
+     <div class="dash-box dash-active"
+     onclick="location.href='?status=cho_duyet'">
+        <div class="dash-title">Chờ duyệt</div>
+        <div class="dash-number">{{ cho }}</div>
+        <div class="dash-icon">🟡</div>
+    </div>
+
+    <div class="dash-box dash-home">
+    <div class="dash-box dash-active"
+     onclick="location.href='?status=cho_duyet'">
+        <div class="dash-title">Đã duyệt</div>
+        <div class="dash-number">{{ da }}</div>
+        <div class="dash-icon">🟢</div>
+    </div>
+
+</div>
 <div class="card">
 
 <table>
