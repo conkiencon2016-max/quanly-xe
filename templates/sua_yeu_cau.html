@@ -1,16 +1,119 @@
-<form method="POST">
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Sửa yêu cầu điều xe</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 
-<input name="nguoi_yeu_cau" value="{{ data.nguoi_yeu_cau }}">
-<input name="chuc_vu" value="{{ data.chuc_vu }}">
-<input name="so_hanh_khach" value="{{ data.so_hanh_khach }}">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 
-<input type="datetime-local" name="ngay_di" value="{{ data.ngay_di }}">
-<input type="datetime-local" name="ngay_ve" value="{{ data.ngay_ve }}">
+<style>
+body{
+    background:#f3f4f6;
+}
+.card-form{
+    max-width:900px;
+    margin:40px auto;
+    border-radius:16px;
+    box-shadow:0 10px 30px rgba(0,0,0,0.1);
+}
+.header-title{
+    font-weight:700;
+    color:#0F3D5E;
+}
+</style>
+</head>
 
-<input name="muc_dich" value="{{ data.muc_dich }}">
-<input name="diem_don" value="{{ data.diem_don }}">
-<input name="diem_den" value="{{ data.diem_den }}">
+<body>
 
-<button class="btn-add">💾 Cập nhật</button>
+<div class="card card-form p-4">
 
-</form>
+    <h4 class="header-title mb-4">✏️ Sửa yêu cầu điều xe</h4>
+
+    <form method="POST">
+
+        <!-- HÀNG 1 -->
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <label class="form-label">Người yêu cầu</label>
+                <input type="text" name="nguoi_yeu_cau"
+                       value="{{ data.nguoi_yeu_cau }}"
+                       class="form-control" required>
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label">Chức vụ</label>
+                <input type="text" name="chuc_vu"
+                       value="{{ data.chuc_vu }}"
+                       class="form-control">
+            </div>
+        </div>
+
+        <!-- HÀNG 2 -->
+        <div class="row mb-3">
+            <div class="col-md-4">
+                <label class="form-label">Số người đi</label>
+                <input type="number" name="so_hanh_khach"
+                       value="{{ data.so_hanh_khach }}"
+                       class="form-control">
+            </div>
+
+            <div class="col-md-4">
+                <label class="form-label">Ngày đi</label>
+                <input type="datetime-local" name="ngay_di"
+                       value="{{ data.ngay_di }}"
+                       class="form-control">
+            </div>
+
+            <div class="col-md-4">
+                <label class="form-label">Ngày về</label>
+                <input type="datetime-local" name="ngay_ve"
+                       value="{{ data.ngay_ve }}"
+                       class="form-control">
+            </div>
+        </div>
+
+        <!-- HÀNG 3 -->
+        <div class="mb-3">
+            <label class="form-label">Mục đích</label>
+            <textarea name="muc_dich"
+                      class="form-control"
+                      rows="3">{{ data.muc_dich }}</textarea>
+        </div>
+
+        <!-- HÀNG 4 -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <label class="form-label">Điểm đón</label>
+                <input type="text" name="diem_don"
+                       value="{{ data.diem_don }}"
+                       class="form-control">
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label">Điểm đến</label>
+                <input type="text" name="diem_den"
+                       value="{{ data.diem_den }}"
+                       class="form-control">
+            </div>
+        </div>
+
+        <!-- BUTTON -->
+        <div class="d-flex justify-content-between">
+
+            <a href="/danh-sach-yeu-cau" class="btn btn-secondary">
+                ← Quay lại
+            </a>
+
+            <button type="submit" class="btn btn-primary">
+                💾 Cập nhật
+            </button>
+
+        </div>
+
+    </form>
+
+</div>
+
+</body>
+</html>
