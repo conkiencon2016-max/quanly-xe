@@ -605,6 +605,7 @@ def quan_ly_tai_xe():
             phone = request.form.get("phone", "").strip()
             address = request.form.get("address", "").strip()
             zalo_user_id = request.form.get("zalo_user_id", "").strip()
+            telegram_chat_id = request.form.get("telegram_chat_id", "").strip()
 
             if not name:
                 return "Thiếu tên tài xế", 400
@@ -612,7 +613,7 @@ def quan_ly_tai_xe():
             con.execute("""
                 INSERT INTO drivers (name, phone, address, zalo_user_id)
                 VALUES (?, ?, ?, ?)
-            """, (name, phone, address, zalo_user_id))
+            """, (name, phone, address, zalo_user_id, telegram_chat_id))
 
             con.commit()
 
@@ -666,12 +667,13 @@ def sua_tai_xe(did):
         name = request.form["name"]
         phone = request.form["phone"]
         address = request.form["address"]
-
+        zalo_user_id= request.form["zalo_user_id"]
+        telegram_chat_id= request.form["telegram_chat_id"]
         con.execute("""
             UPDATE drivers
-            SET name=?, phone=?, address=?
+            SET name=?, phone=?, address=?, zalo_user_id=?, telegram_chat_id=?
             WHERE id=?
-        """, (name, phone, address, did))
+        """, (name, phone, address, zalo_user_id, telegram_chat_id, did))
         con.commit()
         return redirect("/quan-ly-tai-xe")
 
@@ -2300,7 +2302,7 @@ def yeu_cau_dieu_xe():
         SELECT * FROM yeu_cau_xe
         ORDER BY created_at DESC
     """).fetchall()
-    tong = con.execute("SELECT COUNT(*) FROM yeu_cau_xe").fetchone()[0]
+   tong = con.execute("SELECT COUNT(*) FROM yeu_cau_xe").fetchone()[0]
 
     cho = con.execute("""
     SELECT COUNT(*) FROM yeu_cau_xe 
