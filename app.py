@@ -2300,7 +2300,17 @@ def yeu_cau_dieu_xe():
         SELECT * FROM yeu_cau_xe
         ORDER BY created_at DESC
     """).fetchall()
+   tong = con.execute("SELECT COUNT(*) FROM yeu_cau_xe").fetchone()[0]
 
+    cho = con.execute("""
+    SELECT COUNT(*) FROM yeu_cau_xe 
+    WHERE trang_thai='cho_duyet'
+    """).fetchone()[0]
+
+    da = con.execute("""
+    SELECT COUNT(*) FROM yeu_cau_xe 
+    WHERE trang_thai='da_duyet'
+    """).fetchone()[0]
     con.close()
 
     return render_template("yeu_cau_dieu_xe.html", data=data)
@@ -2335,14 +2345,27 @@ def danh_sach_yeu_cau():
             WHERE status=1 AND driver_id IS NOT NULL
         )
     """).fetchall()
+    tong = con.execute("SELECT COUNT(*) FROM yeu_cau_xe").fetchone()[0]
 
+    cho = con.execute("""
+    SELECT COUNT(*) FROM yeu_cau_xe 
+    WHERE trang_thai='cho_duyet'
+    """).fetchone()[0]
+
+    da = con.execute("""
+    SELECT COUNT(*) FROM yeu_cau_xe 
+    WHERE trang_thai='da_duyet'
+    """).fetchone()[0]
     con.close()
 
     return render_template(
         "danh_sach_yeu_cau.html",
         data=data,
         vehicles=vehicles,
-        drivers=drivers
+        drivers=drivers,
+        tong=tong,
+        cho=cho,
+        da=da
     )
 
 # =========================
