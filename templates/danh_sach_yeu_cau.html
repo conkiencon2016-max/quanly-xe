@@ -238,7 +238,7 @@ select{
     <th>Ngày đi</th>
     <th>Ngày về</th>
     <th>Nội dung</th>
-    <th style="min-width:260px">Xử lý</th> <!-- 🔥 FIX -->
+    <th style="min-width:280px">Xử lý</th> <!-- 🔥 FIX -->
 </tr>
 </thead>
 
@@ -289,10 +289,7 @@ select{
 <button class="btn">🚗 Điều xe</button>
 
 </form>
-
 <!-- 🔥 THÊM -->
-<a href="/sua-yeu-cau/{{ r.id }}" class="btn">✏️ Sửa</a>
-
 <a href="/xoa-yeu-cau/{{ r.id }}"
    class="btn"
    onclick="return confirm('Xóa yêu cầu này?')">
