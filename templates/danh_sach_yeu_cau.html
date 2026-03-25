@@ -238,7 +238,7 @@ select{
     <th>Ngày đi</th>
     <th>Ngày về</th>
     <th>Nội dung</th>
-    <th style="min-width:220px">Xử lý</th> <!-- 🔥 FIX -->
+    <th style="min-width:260px">Xử lý</th> <!-- 🔥 FIX -->
 </tr>
 </thead>
 
@@ -267,6 +267,7 @@ select{
 <td title="{{ r.muc_dich }}">{{ r.muc_dich }}</td>
 
 <td>
+
 {% if r.trang_thai == "cho_duyet" %}
 
 <form method="post" action="/xu-ly-yeu-cau/{{ r.id }}" class="action-form">
@@ -289,11 +290,25 @@ select{
 
 </form>
 
-{% else %}
-<span class="status-on">✔</span>
-{% endif %}
-</td>
+<!-- 🔥 THÊM -->
+<a href="/sua-yeu-cau/{{ r.id }}" class="btn">✏️ Sửa</a>
 
+<a href="/xoa-yeu-cau/{{ r.id }}"
+   class="btn"
+   onclick="return confirm('Xóa yêu cầu này?')">
+   🗑️ Xóa
+</a>
+
+{% else %}
+
+<span class="status-on">✔</span>
+
+<!-- 🔥 vẫn cho sửa -->
+<a href="/sua-yeu-cau/{{ r.id }}" class="btn">✏️ Sửa</a>
+
+{% endif %}
+
+</td>
 </tr>
 {% endfor %}
 </tbody>

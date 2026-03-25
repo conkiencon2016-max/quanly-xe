@@ -117,6 +117,7 @@
     <th>Điểm đến</th>
     <th>Thời gian đi</th>
     <th>Thời gian về</th>
+    <th>Thao tác</th>
 </tr>
 </thead>
 
@@ -138,6 +139,17 @@
     <td>{{ r.diem_den }}</td>
     <td>{{ r.ngay_di }}</td>
     <td>{{ r.ngay_ve }}</td>
+    <td>
+    <a href="/sua-yeu-cau/{{ r.id }}" class="btn-edit">✏️</a>
+
+    {% if r.trang_thai == "cho_duyet" %}
+    <a href="/xoa-yeu-cau/{{ r.id }}"
+       class="btn-delete"
+       onclick="return confirm('Xóa yêu cầu này?')">
+       🗑️
+    </a>
+    {% endif %}
+</td>
 </tr>
 {% endfor %}
 </tbody>
