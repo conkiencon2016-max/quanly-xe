@@ -2346,7 +2346,6 @@ def danh_sach_yeu_cau():
         )
     """).fetchall()
     tong = con.execute("SELECT COUNT(*) FROM yeu_cau_xe").fetchone()[0]
-
     cho = con.execute("""
     SELECT COUNT(*) FROM yeu_cau_xe 
     WHERE trang_thai='cho_duyet'
