@@ -1423,7 +1423,7 @@ def login():
             session["username"] = user["username"]
             session["role"] = user["role"]
             session["driver_id"] = user["driver_id"]
-
+            role = user["role"]
             if user["role"] == "admin":
                 return redirect("/")
             elif role == "driver":
