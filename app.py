@@ -15,7 +15,7 @@ from zalo_service import handle_message
 from io import BytesIO
 from collections import defaultdict
 import re
-
+import threading
 def ai_parse_command(text):
 
     text = text.lower()
@@ -90,7 +90,7 @@ app.permanent_session_lifetime = timedelta(minutes=15)
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax",
-    SESSION_COOKIE_SECURE=True  # True nếu chạy HTTPS
+    SESSION_COOKIE_SECURE=False  # True nếu chạy HTTPS
 )
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 ZALO_BOT_TOKEN = os.getenv("ZALO_BOT_TOKEN")
@@ -98,7 +98,7 @@ ZALO_BOT_TOKEN = os.getenv("ZALO_BOT_TOKEN")
 # KẾT NỐI DATABASE
 # =========================
 def db():
-    con = sqlite3.connect("fleet.db")
+    con = sqlite3.connect("fleet.db", timeout=5)
     con.row_factory = sqlite3.Row
     return con
 
@@ -2599,7 +2599,26 @@ def backup():
 
 @app.route("/ping")
 def ping():
-    return "OK"
+    return {"status": "ok"}, 200
+
+# =========================
+# chống ngủ server
+# =========================
+@app.route("/health")
+def health():
+    return "healthy", 200
+# =========================
+# chống ngủ server
+# =========================
+def keep_alive():
+    while True:
+        try:
+            requests.get("https://quanly-xe.onrender.com/ping", timeout=5)
+        except:
+            pass
+        time.sleep(300)
+
+threading.Thread(target=keep_alive, daemon=True).start()
 # =========================
 # CHẠY APP
 # =========================
