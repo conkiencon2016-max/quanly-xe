@@ -48,7 +48,7 @@
 
 <tbody>
 
-{% for row in data %}
+{% for row in users %}
 
 <tr>
 
@@ -62,7 +62,7 @@
 <i class="bi bi-pencil"></i>
 </a>
 
-<a href="/xoa_user/{{row.id}}"
+<a href="/xoa-user/{{row.id}}"
 class="btn btn-sm btn-danger"
 onclick="return confirm('Xóa user này?')">
 
