@@ -2493,108 +2493,19 @@ def xoa_yeu_cau(id):
     con.close()
 
     return redirect("/danh-sach-yeu-cau")
-# ================= QUẢN LÝ USER =================
-
-@app.route("/quanly_user")
-def quanly_user():
-
-    if not check_role(["admin"]):
-        return "Không có quyền!"
-
-    con = db()
-
-    con.execute("SELECT * FROM users ORDER BY id ASC")
-    data = con.fetchall()
-
-    con.close()
-
-    return render_template("quanly_user.html", data=data)
-
-
-# ================= THÊM USER =================
-
-@app.route("/them_user", methods=["POST"])
-def them_user():
-
-    if not check_role(["admin"]):
-        return "Không có quyền!"
-
-    username = request.form["username"]
-    password_hash = "123"
-    role = request.form["role"]
-    zalo_user_id = request.form.get("zalo_user_id")
-    telegram_chat_id = request.form.get("telegram_chat_id")
-    con = db()
-
-    con.execute("""
-    INSERT INTO users (
-        username, password_hash, role, driver_id,
-        zalo_user_id, telegram_chat_id
-    )
-    VALUES (?, ?, ?, ?, ?, ?)
-    """, (
-    username,
-    password_hash,
-    role,
-    driver_id,
-    zalo_user_id,
-    telegram_chat_id
-    ))
-
-    con.commit()
-    con.close()
-
-    return redirect("/quanly_user")
-
-
-# ================= SỬA USER =================
-
-@app.route("/sua_user/<int:id>", methods=["GET","POST"])
-def sua_user(id):
-
-    con = db()
-
-    if request.method == "POST":
-
-        username = request.form["username"]
-        role = request.form["role"]
-
-        con.execute("""
-            UPDATE users
-            SET username=?, role=?
-            WHERE id=?
-        """,(username, role, id))
-
-        con.commit()
-        con.close()
-
-        return redirect("/quanly_user")
-
-    con.execute("SELECT * FROM users WHERE id=?", (id,))
-    row = con.fetchone()
-
-    conn.close()
-
-    return render_template("sua_user.html", row=row)
 
 
 # ================= XÓA USER =================
 
-@app.route("/xoa_user/<int:id>")
+@app.route("/xoa-user/<int:id>")
+@login_required
+@admin_required
 def xoa_user(id):
-
-    if not check_role(["admin"]):
-        return "Không có quyền!"
-
-    conn = sqlite3.connect(DB)
-    c = conn.cursor()
-
-    c.execute("DELETE FROM users WHERE id=?", (id,))
-
-    conn.commit()
-    conn.close()
-    return redirect("/quanly_user")
-
+    con = db()
+    con.execute("DELETE FROM users WHERE id=?", (id,))
+    con.commit()
+    con.close()
+    return redirect("/quan-ly-user")
 
 # =========================
 # sao lưu dữ liệu
