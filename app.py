@@ -1491,28 +1491,55 @@ def quan_ly_user():
 
     con = db()
 
+    # =========================
+    # THÊM USER
+    # =========================
     if request.method == "POST":
-        username = request.form["username"].strip()
-        password = request.form["password"]
-        role = request.form["role"]
-        driver_id = request.form.get("driver_id") or None
+        try:
+            username = request.form["username"].strip()
+            password = request.form["password"]
+            role = request.form["role"]
 
-        password_hash = generate_password_hash(password)
+            driver_id = request.form.get("driver_id") or None
+            zalo_user_id = request.form.get("zalo_user_id") or None
+            telegram_chat_id = request.form.get("telegram_chat_id") or None
 
-        con.execute("""
-            INSERT INTO users (username, password_hash, role, driver_id)
-            VALUES (?, ?, ?, ?)
-        """, (username, password_hash, role, driver_id))
+            password_hash = generate_password_hash(password)
 
-        con.commit()
+            con.execute("""
+                INSERT INTO users (
+                    username, password_hash, role,
+                    driver_id, zalo_user_id, telegram_chat_id, is_active
+                )
+                VALUES (?, ?, ?, ?, ?, ?, 1)
+            """, (
+                username,
+                password_hash,
+                role,
+                driver_id,
+                zalo_user_id,
+                telegram_chat_id
+            ))
 
+            con.commit()
+
+        except Exception as e:
+            con.rollback()
+            return f"Lỗi hệ thống: {str(e)}", 500
+
+    # =========================
+    # LẤY DANH SÁCH
+    # =========================
     users = con.execute("""
         SELECT u.*, d.name
         FROM users u
         LEFT JOIN drivers d ON u.driver_id = d.id
+        ORDER BY u.id DESC
     """).fetchall()
 
-    drivers = con.execute("SELECT id, name FROM drivers").fetchall()
+    drivers = con.execute("""
+        SELECT id, name FROM drivers ORDER BY name
+    """).fetchall()
 
     con.close()
 
@@ -1521,6 +1548,52 @@ def quan_ly_user():
         users=users,
         drivers=drivers
     )
+# =========================
+# sua user
+# =========================
+@app.route("/sua-user/<int:id>", methods=["GET", "POST"])
+@login_required
+@admin_required
+def sua_user(id):
+
+    con = db()
+
+    if request.method == "POST":
+        try:
+            con.execute("""
+                UPDATE users
+                SET username=?,
+                    role=?,
+                    driver_id=?,
+                    zalo_user_id=?,
+                    telegram_chat_id=?
+                WHERE id=?
+            """, (
+                request.form["username"],
+                request.form["role"],
+                request.form.get("driver_id") or None,
+                request.form.get("zalo_user_id") or None,
+                request.form.get("telegram_chat_id") or None,
+                id
+            ))
+
+            con.commit()
+
+        except Exception as e:
+            con.rollback()
+            return f"Lỗi hệ thống: {str(e)}", 500
+
+        finally:
+            con.close()
+
+        return redirect("/quan-ly-user")
+
+    user = con.execute("SELECT * FROM users WHERE id=?", (id,)).fetchone()
+    drivers = con.execute("SELECT id, name FROM drivers").fetchall()
+
+    con.close()
+
+    return render_template("sua_user.html", row=user, drivers=drivers)
 # =========================
 # change password
 # =========================
@@ -2501,10 +2574,12 @@ def xoa_yeu_cau(id):
 @login_required
 @admin_required
 def xoa_user(id):
+
     con = db()
     con.execute("DELETE FROM users WHERE id=?", (id,))
     con.commit()
     con.close()
+
     return redirect("/quan-ly-user")
 
 # =========================
