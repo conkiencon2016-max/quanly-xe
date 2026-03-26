@@ -184,6 +184,14 @@ footer {
                     <i class="bi bi-key"></i> Đổi mật khẩu
                 </a>
             </li>
+           <li>
+{% if session.get("role") == "admin" %}
+<li>
+<a class="dropdown-item" href="/quanly_user">
+<i class="bi bi-people"></i> Quản lý người dùng
+</a>
+</li>
+{% endif %}
             <li><hr class="dropdown-divider"></li>
             <li>
                 <a class="dropdown-item text-danger"
@@ -206,7 +214,7 @@ footer {
 
 <section class="menu">
 
-{% if role == "admin" %}
+ {% if session.get("role") in ["admin","user", "viewer"] %}
     
     <!-- Điều xe -->
    <div class="card">
@@ -214,37 +222,44 @@ footer {
     <h2>Yêu cầu điều xe</h2>
     <a href="/yeu-cau-dieu-xe" class="btn-dieuxe">Tạo yêu cầu</a>
 </div>
-
+{% endif %}
+{% if session.get("role") in ["admin","user"] %}
 <div class="card">
     <span class="icon">📋</span>
     <h2>Danh sách yêu cầu</h2>
     <a href="/danh-sach-yeu-cau" class="btn-quanly">Xem danh sách</a>
 </div>
+ {% endif %}
+ {% if session.get("role") in ["admin","user"] %}
     <div class="card">
     <span class="icon">🚗</span>
     <h2>Điều xe</h2>
     <a href="/dieu-xe" class="btn-dieuxe">Vào chức năng</a>
 </div>
-
+{% endif %}
+ {% if session.get("role") in ["admin","user"] %}
    <div class="card">
     <span class="icon">📁</span>
     <h2>Quản lý phương tiện</h2>
     <a href="/quan-ly-xe-menu" class="btn-quanly">Vào chức năng</a>
 </div>
+ {% endif %}
+  {% if session.get("role") in ["admin","user"] %}
  <div class="card">
     <span class="icon">👤</span>
     <h2>Quản lý tài xế</h2>
     <a href="/quan-ly-tai-xe" class="btn-taixe">Vào chức năng</a>
 </div>
-
+{% endif %}
+  {% if session.get("role") in ["admin","user"] %}
     <div class="card">
     <span class="icon">📊</span>
     <h2>Thống kê</h2>
     <a href="/thong-ke" class="btn-thongke">Vào chức năng</a>
 </div>
-  
+   {% endif %}
 
-{% else %}
+  {% if session.get("role") in ["admin","driver"] %}
 
     <!-- DRIVER CHỈ THẤY ĐIỀU XE -->
     <div class="card">
