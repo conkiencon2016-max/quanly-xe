@@ -593,6 +593,8 @@ def stop_driver(vid):
 # QUẢN LÝ TÀI XẾ 
 # =========================
 @app.route("/quan-ly-tai-xe", methods=["GET", "POST"])
+@login_required
+@admin_required
 def quan_ly_tai_xe():
     con = db()
 
@@ -1424,8 +1426,10 @@ def login():
 
             if user["role"] == "admin":
                 return redirect("/")
-            else:
+            elif role == "driver":
                 return redirect("/dieu-xe-driver")
+            else:
+                return redirect("/")   # user + viewer vào home
 
         return render_template("login_dieuxe.html", error="Sai tài khoản hoặc mật khẩu")
 
