@@ -2493,6 +2493,78 @@ def xoa_yeu_cau(id):
     con.close()
 
     return redirect("/danh-sach-yeu-cau")
+# ================= QUẢN LÝ USER =================
+
+@app.route("/quanly_user")
+def quanly_user():
+
+    if not check_role(["admin"]):
+        return "Không có quyền!"
+
+    con = db()
+
+    con.execute("SELECT * FROM users ORDER BY id ASC")
+    data = c.fetchall()
+
+    conn.close()
+
+    return render_template("quanly_user.html", data=data)
+
+
+# ================= THÊM USER =================
+
+@app.route("/them_user", methods=["POST"])
+def them_user():
+
+    if not check_role(["admin"]):
+        return "Không có quyền!"
+
+    username = request.form["username"]
+    password_hash = "123"
+    role = request.form["role"]
+
+    con = db()
+
+    con.execute(
+        "INSERT INTO users(username,password_hash,role) VALUES(?,?,?)",
+        (username, password_hash, role)
+    )
+
+    conn.commit()
+    conn.close()
+
+    return redirect("/quanly_user")
+
+
+# ================= SỬA USER =================
+
+@app.route("/sua_user/<int:id>", methods=["GET","POST"])
+def sua_user(id):
+
+    con = db()
+
+    if request.method == "POST":
+
+        username = request.form["username"]
+        role = request.form["role"]
+
+        con.execute("""
+            UPDATE users
+            SET username=?, role=?
+            WHERE id=?
+        """,(username, role, id))
+
+        conn.commit()
+        conn.close()
+
+        return redirect("/quanly_user")
+
+    con.execute("SELECT * FROM users WHERE id=?", (id,))
+    row = c.fetchone()
+
+    conn.close()
+
+    return render_template("sua_user.html", row=row)
 
 
 # =========================
