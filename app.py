@@ -2504,9 +2504,9 @@ def quanly_user():
     con = db()
 
     con.execute("SELECT * FROM users ORDER BY id ASC")
-    data = c.fetchall()
+    data = con.fetchall()
 
-    conn.close()
+    con.close()
 
     return render_template("quanly_user.html", data=data)
 
@@ -2522,16 +2522,27 @@ def them_user():
     username = request.form["username"]
     password_hash = "123"
     role = request.form["role"]
-
+    zalo_user_id = request.form.get("zalo_user_id")
+    telegram_chat_id = request.form.get("telegram_chat_id")
     con = db()
 
-    con.execute(
-        "INSERT INTO users(username,password_hash,role) VALUES(?,?,?)",
-        (username, password_hash, role)
+    con.execute("""
+    INSERT INTO users (
+        username, password_hash, role, driver_id,
+        zalo_user_id, telegram_chat_id
     )
+    VALUES (?, ?, ?, ?, ?, ?)
+    """, (
+    username,
+    password_hash,
+    role,
+    driver_id,
+    zalo_user_id,
+    telegram_chat_id
+    ))
 
-    conn.commit()
-    conn.close()
+    con.commit()
+    con.close()
 
     return redirect("/quanly_user")
 
@@ -2554,17 +2565,35 @@ def sua_user(id):
             WHERE id=?
         """,(username, role, id))
 
-        conn.commit()
-        conn.close()
+        con.commit()
+        con.close()
 
         return redirect("/quanly_user")
 
     con.execute("SELECT * FROM users WHERE id=?", (id,))
-    row = c.fetchone()
+    row = con.fetchone()
 
     conn.close()
 
     return render_template("sua_user.html", row=row)
+
+
+# ================= XÓA USER =================
+
+@app.route("/xoa_user/<int:id>")
+def xoa_user(id):
+
+    if not check_role(["admin"]):
+        return "Không có quyền!"
+
+    conn = sqlite3.connect(DB)
+    c = conn.cursor()
+
+    c.execute("DELETE FROM users WHERE id=?", (id,))
+
+    conn.commit()
+    conn.close()
+    return redirect("/quanly_user")
 
 
 # =========================
