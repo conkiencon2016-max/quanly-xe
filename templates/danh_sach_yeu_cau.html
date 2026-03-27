@@ -288,8 +288,8 @@ select{
 <td title="{{ r.diem_don }}">{{ r.diem_don }}</td>
 <td title="{{ r.diem_den }}">{{ r.diem_den }}</td>
 
-<td>{{ r.ngay_di }}</td>
-<td>{{ r.ngay_ve }}</td>
+<td>{{ r.ngay_di[:16] if r.ngay_di }}</td>
+<td>{{ r.ngay_ve[:16] if r.ngay_ve }}</td>
 
 <td title="{{ r.muc_dich }}">{{ r.muc_dich }}</td>
 
