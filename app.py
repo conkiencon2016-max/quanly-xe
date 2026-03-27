@@ -16,6 +16,19 @@ from io import BytesIO
 from collections import defaultdict
 import re
 import threading
+db_lock = threading.Lock()
+
+def execute_retry(con, query, params=(), retries=5):
+    for i in range(retries):
+        try:
+            return con.execute(query, params)
+        except sqlite3.OperationalError as e:
+            if "locked" in str(e):
+                time.sleep(0.2 * (i + 1))
+            else:
+                raise
+    raise Exception("DB bị lock quá lâu")
+
 def ai_parse_command(text):
 
     text = text.lower()
@@ -98,10 +111,18 @@ ZALO_BOT_TOKEN = os.getenv("ZALO_BOT_TOKEN")
 # KẾT NỐI DATABASE
 # =========================
 def db():
-    con = sqlite3.connect("fleet.db", timeout=5)
+    con = sqlite3.connect(
+        "fleet.db",
+        timeout=30,
+        check_same_thread=False
+    )
     con.row_factory = sqlite3.Row
-    return con
 
+    # 🔥 QUAN TRỌNG NHẤT
+    con.execute("PRAGMA journal_mode=WAL;")
+    con.execute("PRAGMA synchronous=NORMAL;")
+
+    return con
 # =========================
 # sesion logout
 # =========================
@@ -313,7 +334,7 @@ def start(vid):
             return "Lỗi: Tài xế đang lái xe khác!", 400
 
         # cập nhật xe
-        con.execute("""
+        execute_retry(con, """
             UPDATE vehicles
             SET status = 1,
                 driver_id = ?,
@@ -445,7 +466,8 @@ def stop(vid):
         duration_minutes = int((end_dt - start_dt).total_seconds() / 60)
 
         # 3️⃣ GHI LỊCH SỬ
-        con.execute("""
+        execute_retry(con, """
+
             INSERT INTO trip_history (
                 vehicle_id,
                 plate,
@@ -479,7 +501,7 @@ def stop(vid):
         """, (new_km, vid))
 
         # 5️⃣ RESET TRẠNG THÁI XE
-        con.execute("""
+        execute_retry(con,"""
             UPDATE vehicles
             SET status = 0,
                 driver_id = NULL,
@@ -695,7 +717,7 @@ def sua_tai_xe(did):
 def xoa_tai_xe(did):
     con = db()
 
-    busy = con.execute("""
+    busy = execute_retry(con, """
         SELECT 1 FROM vehicles
         WHERE status = 1 AND driver_id = ?
     """, (did,)).fetchone()
@@ -703,7 +725,7 @@ def xoa_tai_xe(did):
     if busy:
         return "Không thể xóa: Tài xế đang điều xe", 400
 
-    con.execute("DELETE FROM drivers WHERE id = ?", (did,))
+    execute_retry(con, "DELETE FROM drivers WHERE id = ?", (did,))
     con.commit()
     return redirect("/quan-ly-tai-xe")
 # =========================
@@ -837,7 +859,7 @@ def them_dang_kiem():
                 return "Ngày hết hạn không hợp lệ", 400
 
             # ===== LƯU LỊCH SỬ ĐĂNG KIỂM =====
-            con.execute("""
+            execute_retry(con, """
                 INSERT INTO dang_kiem
                 (vehicle_id, so_dang_ky, loai,
                  ngay_dang_ky, ngay_het_han,
@@ -857,7 +879,7 @@ def them_dang_kiem():
             ))
 
             # ===== CẬP NHẬT HẠN ĐĂNG KIỂM HIỆN TẠI CHO XE =====
-            con.execute("""
+            execute_retry(con, """
                 UPDATE vehicles
                 SET ngay_het_han_dang_kiem = ?
                 WHERE id = ?
@@ -1039,7 +1061,7 @@ def them_bao_duong():
             current_km = vehicle["km"] or 0
 
             # ===== 1️⃣ LƯU LỊCH SỬ BẢO DƯỠNG =====
-            con.execute("""
+            execute_retry(con, """
                 INSERT INTO bao_duong
                 (vehicle_id, loai, noi_dung,
                  ngay_thuc_hien, ngay_hoan_thanh,
@@ -1061,7 +1083,7 @@ def them_bao_duong():
 
             # ===== 2️⃣ CẬP NHẬT MỐC KM NẾU HOÀN THÀNH =====
             if trang_thai == "hoan_thanh":
-                con.execute("""
+                execute_retry(con, """
                     UPDATE vehicles
                     SET last_maintenance_km = ?
                     WHERE id = ?
@@ -1136,7 +1158,7 @@ def quan_ly_xe():
             fuel_norm = float(request.form.get("fuel_norm") or 0)
             ngay_het_han_dk = request.form.get("ngay_het_han_dang_kiem")
 
-            con.execute("""
+            execute_retry(con, """
                 INSERT INTO vehicles (
                     plate,
                     brand,
@@ -1288,7 +1310,7 @@ def xoa_xe(vid):
     if busy:
         return "Không thể xóa: Xe đang được điều", 400
 
-    con.execute("DELETE FROM vehicles WHERE id = ?", (vid,))
+    execute_retry(con, "DELETE FROM vehicles WHERE id = ?", (vid,))
     con.commit()
     con.close()
 
@@ -1334,7 +1356,7 @@ def sua_xe(vid):
                 maintenance_cycle = 5000
 
             # ===== UPDATE DATABASE =====
-            con.execute("""
+            execute_retry(con, """
                 UPDATE vehicles
                 SET plate=?,
                     brand=?,
@@ -1510,7 +1532,7 @@ def quan_ly_user():
 
             password_hash = generate_password_hash(password)
 
-            con.execute("""
+            execute_retry(con, """
                 INSERT INTO users (
                     username, password_hash, role,
                     driver_id, zalo_user_id, telegram_chat_id, is_active
@@ -1687,7 +1709,7 @@ def sua_bao_duong(id):
 def xoa_bao_duong(id):
 
     con = db()
-    con.execute("DELETE FROM bao_duong WHERE id=?", (id,))
+    execute_retry(con, "DELETE FROM bao_duong WHERE id=?", (id,))
     con.commit()
     con.close()
 
@@ -1745,7 +1767,7 @@ def sua_dang_kiem(id):
 def xoa_dang_kiem(id):
 
     con = db()
-    con.execute("DELETE FROM dang_kiem WHERE id=?", (id,))
+    execute_retry(con, "DELETE FROM dang_kiem WHERE id=?", (id,))
     con.commit()
     con.close()
 
@@ -2348,7 +2370,7 @@ def dashboard_data():
 
     return {"data": data}
 # =========================
-# tạo trang yêu cầu
+# yêu cầu điều xe
 # =========================
 @app.route("/yeu-cau-dieu-xe", methods=["GET", "POST"])
 @login_required
@@ -2360,7 +2382,7 @@ def yeu_cau_dieu_xe():
     # THÊM YÊU CẦU
     # =========================
     if request.method == "POST":
-        con.execute("""
+        execute_retry(con, """
             INSERT INTO yeu_cau_xe (
                 nguoi_yeu_cau, chuc_vu, so_hanh_khach,
                 muc_dich, diem_don, diem_den,
@@ -2511,7 +2533,7 @@ def xu_ly_yeu_cau(id):
     end_time = yc["ngay_ve"] or datetime.now().isoformat()
     work_content = f"{yc['muc_dich']} với đồng chí {yc['nguoi_yeu_cau']} - ngày về {end_time}"
 
-    con.execute("""
+    execute_retry(con, """
         UPDATE vehicles
         SET status=1,
             driver_id=?,
@@ -2524,7 +2546,7 @@ def xu_ly_yeu_cau(id):
     # =========================
     # CẬP NHẬT YÊU CẦU
     # =========================
-    con.execute("""
+    execute_retry(con, """
         UPDATE yeu_cau_xe
         SET trang_thai='da_duyet'
         WHERE id=?
@@ -2599,7 +2621,7 @@ def xoa_yeu_cau(id):
     if check and check["trang_thai"] != "cho_duyet":
         return "Không thể xóa: yêu cầu đã duyệt", 400
 
-    con.execute("DELETE FROM yeu_cau_xe WHERE id=?", (id,))
+    execute_retry(con, "DELETE FROM yeu_cau_xe WHERE id=?", (id,))
     con.commit()
     con.close()
 
@@ -2614,7 +2636,7 @@ def xoa_yeu_cau(id):
 def xoa_user(id):
 
     con = db()
-    con.execute("DELETE FROM users WHERE id=?", (id,))
+    execute_retry(con, "DELETE FROM users WHERE id=?", (id,))
     con.commit()
     con.close()
 
