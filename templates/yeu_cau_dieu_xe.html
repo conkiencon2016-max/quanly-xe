@@ -161,8 +161,8 @@
 
     <td>{{ r.diem_don }} </td>
     <td>{{ r.diem_den }}</td>
-    <td>{{ r.ngay_di }}</td>
-    <td>{{ r.ngay_ve }}</td>
+    <td>{{ r.ngay_di[:16] if r.ngay_di }}</td>
+    <td>{{ r.ngay_ve[:16] if r.ngay_ve }}</td>
     <td>
     <a href="/sua-yeu-cau/{{ r.id }}" class="btn-edit">✏️</a>
 
