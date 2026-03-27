@@ -2667,10 +2667,7 @@ def sua_yeu_cau(id):
     ).fetchone()
 
     con.close()
-    data = dict(data)
-
-    data["ngay_di_input"] = format_datetime_input(data.get("ngay_di"))
-    data["ngay_ve_input"] = format_datetime_input(data.get("ngay_ve"))
+    
     return render_template("sua_yeu_cau.html", data=data)
 # =========================
 # XÓA YÊU CẦU
