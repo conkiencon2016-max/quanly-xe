@@ -2375,11 +2375,17 @@ def yeu_cau_dieu_xe():
             request.form["ngay_ve"]
         ))
         con.commit()
+    status = request.args.get("status")
 
-    data = con.execute("""
-        SELECT * FROM yeu_cau_xe
-        ORDER BY created_at DESC
-    """).fetchall()
+    sql = "SELECT * FROM yeu_cau_xe WHERE 1=1"
+
+    if status == "cho_duyet":
+        sql += " AND trang_thai='cho_duyet'"
+    elif status == "da_duyet":
+        sql += " AND trang_thai='da_duyet'"
+
+    sql += " ORDER BY created_at DESC"
+    
     tong = con.execute("SELECT COUNT(*) FROM yeu_cau_xe").fetchone()[0]
 
     cho = con.execute("""
@@ -2393,7 +2399,13 @@ def yeu_cau_dieu_xe():
     """).fetchone()[0]
     con.close()
 
-    return render_template("yeu_cau_dieu_xe.html", data=data)
+    return render_template(
+    "yeu_cau_dieu_xe.html",
+    data=data,
+    tong=tong,
+    cho=cho,
+    da=da
+    )
 
 # =========================
 # danh sách yêu cầu
@@ -2404,10 +2416,18 @@ def danh_sach_yeu_cau():
 
     con = db()
 
-    data = con.execute("""
-        SELECT * FROM yeu_cau_xe
-        ORDER BY created_at DESC
-    """).fetchall()
+    status = request.args.get("status")
+
+    sql = "SELECT * FROM yeu_cau_xe WHERE 1=1"
+
+    if status == "cho_duyet":
+        sql += " AND trang_thai='cho_duyet'"
+    elif status == "da_duyet":
+        sql += " AND trang_thai='da_duyet'"
+
+    sql += " ORDER BY created_at DESC"
+
+    data = con.execute(sql).fetchall()
 
     # 👉 lấy xe rảnh
     vehicles = con.execute("""
