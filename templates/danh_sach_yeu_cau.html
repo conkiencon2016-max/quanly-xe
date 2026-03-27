@@ -224,33 +224,6 @@ select{
     </div>
 
 </div>
-<div class="card" style="margin-bottom:15px">
-
-<form method="get" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center">
-
-    <input type="text"
-           name="search_name"
-           placeholder="Người đi công tác"
-           value="{{ search_name or '' }}"
-           style="padding:8px; border-radius:6px; border:1px solid #ccc">
-
-    <input type="date"
-           name="tu_ngay"
-           value="{{ tu_ngay or '' }}"
-           style="padding:8px; border-radius:6px; border:1px solid #ccc">
-
-    <input type="date"
-           name="den_ngay"
-           value="{{ den_ngay or '' }}"
-           style="padding:8px; border-radius:6px; border:1px solid #ccc">
-
-    <button class="btn">🔍 Tìm kiếm</button>
-
-    <a href="/danh-sach-yeu-cau" class="btn" style="background:#6b7280">
-        Reset
-    </a>
-
-</form>    
 <div class="card">
 
 <table>
@@ -288,9 +261,8 @@ select{
 <td title="{{ r.diem_don }}">{{ r.diem_don }}</td>
 <td title="{{ r.diem_den }}">{{ r.diem_den }}</td>
 
-<td>{{ r.ngay_di[:16] if r.ngay_di }}</td>
-<td>{{ r.ngay_ve[:16] if r.ngay_ve }}</td>
-
+<td>{{ r.ngay_di_dep }}</td>
+<td>{{ r.ngay_ve_dep }}</td>
 <td title="{{ r.muc_dich }}">{{ r.muc_dich }}</td>
 
 <td>

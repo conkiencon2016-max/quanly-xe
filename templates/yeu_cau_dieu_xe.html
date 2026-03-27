@@ -101,31 +101,7 @@
 </form>
 
 </div>
-<div class="card" style="margin-bottom:15px">
 
-<form method="get" style="display:flex; gap:10px; flex-wrap:wrap">
-
-    <input type="text"
-           name="search_name"
-           placeholder="Người yêu cầu"
-           value="{{ search_name or '' }}"
-           style="padding:8px; border-radius:6px; border:1px solid #ccc">
-
-    <input type="date"
-           name="tu_ngay"
-           value="{{ tu_ngay or '' }}"
-           style="padding:8px; border-radius:6px; border:1px solid #ccc">
-
-    <input type="date"
-           name="den_ngay"
-           value="{{ den_ngay or '' }}"
-           style="padding:8px; border-radius:6px; border:1px solid #ccc">
-
-    <button class="btn-add">🔍 Tìm</button>
-
-</form>
-
-</div>
 <!-- DANH SÁCH -->
 <div class="card">
 
@@ -161,8 +137,8 @@
 
     <td>{{ r.diem_don }} </td>
     <td>{{ r.diem_den }}</td>
-    <td>{{ r.ngay_di[:16] if r.ngay_di }}</td>
-    <td>{{ r.ngay_ve[:16] if r.ngay_ve }}</td>
+    <td>{{ r.ngay_di_dep }}</td>
+    <td>{{ r.ngay_ve_dep }}</td>
     <td>
     <a href="/sua-yeu-cau/{{ r.id }}" class="btn-edit">✏️</a>
 
