@@ -2476,7 +2476,7 @@ def xu_ly_yeu_cau(id):
     # =========================
     start_time = yc["ngay_di"] or datetime.now().isoformat()
     end_time = yc["ngay_ve"] or datetime.now().isoformat()
-    work_content = f"{yc['muc_dich']} - Dự kiến ngày về {yc['ngay_ve']}"
+    work_content = f"{yc['muc_dich']} - Dự kiến ngày về {end_time}"
 
     con.execute("""
         UPDATE vehicles
