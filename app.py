@@ -2452,17 +2452,32 @@ def danh_sach_yeu_cau():
     con = db()
 
     status = request.args.get("status")
-
+    search_name = request.args.get("search_name", "").strip()
+    tu_ngay = request.args.get("tu_ngay")
+    den_ngay = request.args.get("den_ngay")
     sql = "SELECT * FROM yeu_cau_xe WHERE 1=1"
-
+    params = []
     if status == "cho_duyet":
         sql += " AND trang_thai='cho_duyet'"
     elif status == "da_duyet":
         sql += " AND trang_thai='da_duyet'"
+    # lọc theo tên
+    if search_name:
+         sql += " AND nguoi_yeu_cau LIKE ?"
+         params.append(f"%{search_name}%")
 
+    # lọc từ ngày
+    if tu_ngay:
+        sql += " AND DATE(ngay_di) >= DATE(?)"
+        params.append(tu_ngay)
+
+    # lọc đến ngày
+    if den_ngay:
+        sql += " AND DATE(ngay_di) <= DATE(?)"
+        params.append(den_ngay)
     sql += " ORDER BY created_at DESC"
 
-    data = con.execute(sql).fetchall()
+    data = con.execute(sql, params).fetchall()
 
     # 👉 lấy xe rảnh
     vehicles = con.execute("""
@@ -2499,7 +2514,10 @@ def danh_sach_yeu_cau():
         drivers=drivers,
         tong=tong,
         cho=cho,
-        da=da
+        da=da,
+        search_name=search_name,
+        tu_ngay=tu_ngay,
+        den_ngay=den_ngay
     )
 
 # =========================
