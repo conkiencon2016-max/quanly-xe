@@ -2356,25 +2356,33 @@ def yeu_cau_dieu_xe():
 
     con = db()
 
+    # =========================
+    # THÊM YÊU CẦU
+    # =========================
     if request.method == "POST":
         con.execute("""
             INSERT INTO yeu_cau_xe (
                 nguoi_yeu_cau, chuc_vu, so_hanh_khach,
                 muc_dich, diem_don, diem_den,
-                ngay_di, ngay_ve
+                ngay_di, ngay_ve,
+                trang_thai, created_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'cho_duyet', datetime('now'))
         """, (
             request.form["nguoi_yeu_cau"],
-            request.form["chuc_vu"],
-            request.form["so_hanh_khach"],
-            request.form["muc_dich"],
-            request.form["diem_don"],
-            request.form["diem_den"],
-            request.form["ngay_di"],
-            request.form["ngay_ve"]
+            request.form.get("chuc_vu"),
+            request.form.get("so_hanh_khach"),
+            request.form.get("muc_dich"),
+            request.form.get("diem_don"),
+            request.form.get("diem_den"),
+            request.form.get("ngay_di"),
+            request.form.get("ngay_ve")
         ))
         con.commit()
+
+    # =========================
+    # FILTER
+    # =========================
     status = request.args.get("status")
 
     sql = "SELECT * FROM yeu_cau_xe WHERE 1=1"
@@ -2385,28 +2393,33 @@ def yeu_cau_dieu_xe():
         sql += " AND trang_thai='da_duyet'"
 
     sql += " ORDER BY created_at DESC"
-    
+
+    data = con.execute(sql).fetchall()   # ✅ FIX LỖI 500
+
+    # =========================
+    # DASHBOARD
+    # =========================
     tong = con.execute("SELECT COUNT(*) FROM yeu_cau_xe").fetchone()[0]
 
     cho = con.execute("""
-    SELECT COUNT(*) FROM yeu_cau_xe 
-    WHERE trang_thai='cho_duyet'
+        SELECT COUNT(*) FROM yeu_cau_xe 
+        WHERE trang_thai='cho_duyet'
     """).fetchone()[0]
 
     da = con.execute("""
-    SELECT COUNT(*) FROM yeu_cau_xe 
-    WHERE trang_thai='da_duyet'
+        SELECT COUNT(*) FROM yeu_cau_xe 
+        WHERE trang_thai='da_duyet'
     """).fetchone()[0]
+
     con.close()
 
     return render_template(
-    "yeu_cau_dieu_xe.html",
-    data=data,
-    tong=tong,
-    cho=cho,
-    da=da
+        "yeu_cau_dieu_xe.html",
+        data=data,
+        tong=tong,
+        cho=cho,
+        da=da
     )
-
 # =========================
 # danh sách yêu cầu
 # =========================
