@@ -16,6 +16,35 @@ from io import BytesIO
 from collections import defaultdict
 import re
 import threading
+
+# =========================
+# FORMAT DATETIME (GLOBAL)
+# =========================
+def format_date(val):
+    if not val:
+        return ""
+    try:
+        return datetime.fromisoformat(val).strftime("%d/%m/%Y")
+    except:
+        return val
+
+def format_datetime(val):
+    if not val:
+        return ""
+    try:
+        return datetime.fromisoformat(val).strftime("%d/%m/%Y %H:%M")
+    except:
+        return val
+
+def format_datetime_input(val):
+    """dùng cho input datetime-local"""
+    if not val:
+        return ""
+    try:
+        return datetime.fromisoformat(val).strftime("%Y-%m-%dT%H:%M")
+    except:
+        return val
+
 db_lock = threading.Lock()
 
 def execute_retry(con, query, params=(), retries=5):
@@ -283,11 +312,11 @@ def dieu_xe():
 
         if v["start_time"]:
             start_dt = datetime.fromisoformat(v["start_time"])
-            start = start_dt.strftime("%d/%m/%Y")
+            start = format_date(v["start_time"])
 
         if v["end_time"]:
             end_dt = datetime.fromisoformat(v["end_time"])
-            end = end_dt.strftime("%d/%m/%Y")
+            end = format_date(v["end_time"])
 
         vehicles.append((
             v["id"],
@@ -805,8 +834,8 @@ def lich_su_dang_kiem():
                 r["plate"],
                 r["so_dang_ky"],
                 r["loai"],
-                r["ngay_dang_ky"],
-                r["ngay_het_han"],
+                format_date(r["ngay_dang_ky"]),
+                format_date(r["ngay_het_han"]),
                 r["trung_tam"],
                 r["chi_phi"],
                 r["nguoi_thuc_hien"]
@@ -1885,8 +1914,8 @@ def thong_ke():
                     r["plate"],
                     r["driver_name"],
                     r["work_content"],
-                    r["start_time"],
-                    r["end_time"],
+                    format_datetime(r["start_time"]),
+                    format_datetime(r["end_time"]),
                     r["km_travel"] or 0,
                     r["duration_minutes"] or 0
                 ])
@@ -2416,7 +2445,16 @@ def yeu_cau_dieu_xe():
 
     sql += " ORDER BY created_at DESC"
 
-    data = con.execute(sql).fetchall()   # ✅ FIX LỖI 500
+    data_raw = con.execute(sql).fetchall()
+
+    data = []
+    for r in data_raw:
+        r = dict(r)
+
+        r["ngay_di_dep"] = format_datetime(r.get("ngay_di"))
+        r["ngay_ve_dep"] = format_datetime(r.get("ngay_ve"))
+
+        data.append(r)   # ✅ FIX LỖI 500
 
     # =========================
     # DASHBOARD
@@ -2477,7 +2515,16 @@ def danh_sach_yeu_cau():
         params.append(den_ngay)
     sql += " ORDER BY created_at DESC"
 
-    data = con.execute(sql, params).fetchall()
+    data_raw = con.execute(sql, params).fetchall()
+
+    data = []
+    for r in data_raw:
+        r = dict(r)
+
+        r["ngay_di_dep"] = format_date(r.get("ngay_di"))
+        r["ngay_ve_dep"] = format_date(r.get("ngay_ve"))
+
+        data.append(r)
 
     # 👉 lấy xe rảnh
     vehicles = con.execute("""
@@ -2620,7 +2667,10 @@ def sua_yeu_cau(id):
     ).fetchone()
 
     con.close()
+    data = dict(data)
 
+    data["ngay_di_input"] = format_datetime_input(data.get("ngay_di"))
+    data["ngay_ve_input"] = format_datetime_input(data.get("ngay_ve"))
     return render_template("sua_yeu_cau.html", data=data)
 # =========================
 # XÓA YÊU CẦU
