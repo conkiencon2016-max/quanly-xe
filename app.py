@@ -137,6 +137,26 @@ app.config.update(
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 ZALO_BOT_TOKEN = os.getenv("ZALO_BOT_TOKEN")
 # =========================
+# TELEGRAM SERVICE
+# =========================
+def send_telegram(chat_id, message):
+    if not TELEGRAM_TOKEN or not chat_id:
+        return
+
+    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+
+    try:
+        res = requests.post(url, json={
+            "chat_id": chat_id,
+            "text": message
+        }, timeout=5)
+
+        if res.status_code != 200:
+            print("Telegram lỗi:", res.text)
+
+    except Exception as e:
+        print("Telegram exception:", e)
+# =========================
 # KẾT NỐI DATABASE
 # =========================
 def db():
@@ -2619,6 +2639,30 @@ def xu_ly_yeu_cau(id):
 
     con.commit()
     con.close()
+    
+    # =========================
+    # 🔥 GỬI ZALO + TELEGRAM
+    # =========================
+    if info:
+
+        noi_dung = f"""
+🚗 ĐIỀU XE 
+
+Xe: {info['plate']}
+Tài xế: {info['name']}
+Thời gian đi: {yc['ngay_di']}
+Thời gian về: {yc['ngay_về']}
+Người yêu cầu: {yc['nguoi_yeu_cau']} 
+Nội dung:
+{yc['muc_dich']}
+"""
+
+        if info["zalo_user_id"]:
+            gui_zalo_cho_taixe(info["zalo_user_id"], noi_dung)
+
+        if info["telegram_chat_id"]:
+            send_telegram(info["telegram_chat_id"], noi_dung)
+
 
     return redirect("/danh-sach-yeu-cau")
 
