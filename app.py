@@ -372,7 +372,8 @@ def start(vid):
         driver_id = int(request.form["driver_id"])
         start_time = request.form["start_time"]
         work_content = request.form["work_content"]
-
+        requester = request.form.get("requester")
+        end_time = request.form.get("end_time")
         # kiểm tra tài xế bận
         busy = con.execute("""
             SELECT 1 FROM vehicles
@@ -389,9 +390,10 @@ def start(vid):
                 driver_id = ?,
                 start_time = ?,
                 end_time = NULL,
-                work_content = ?
+                work_content = ?,
+                requester = ?
             WHERE id = ?
-        """, (driver_id, start_time, work_content, vid))
+        """, (driver_id, start_time, end_time, work_content, requester, vid))
 
         # lấy thông tin xe + tài xế
         info = con.execute("""
