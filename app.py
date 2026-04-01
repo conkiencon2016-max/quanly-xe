@@ -418,6 +418,8 @@ def start(vid):
     # =============================
     start_dt = datetime.fromisoformat(start_time)
     thoi_gian_dep = start_dt.strftime("%H:%M ngày %d/%m/%Y")
+    end_dt = datetime.fromisoformat(end_time)
+    thoi_gian_dep1 = end_dt.strftime("%H:%M ngày %d/%m/%Y")
     if info:
 
         noi_dung = f"""
@@ -425,8 +427,8 @@ def start(vid):
 
 Xe: {info['plate']}
 Tài xế: {info['name']}
-Thời gian: {thoi_gian_dep}
-
+Thời gian đi: {thoi_gian_dep}
+Thời gian về: {thoi_gian_dep1}
 Nội dung:
 {work_content}
 
@@ -2652,6 +2654,10 @@ def xu_ly_yeu_cau(id):
     # =========================
     # 🔥 GỬI ZALO + TELEGRAM
     # =========================
+    ngaydi_dt = datetime.fromisoformat(ngay_di)
+    ngay_di_dep = ngaydi_dt.strftime("%H:%M ngày %d/%m/%Y")
+    ngayve_dt = datetime.fromisoformat(ngay_ve)
+    ngay_ve_dep = ngayve_dt.strftime("%H:%M ngày %d/%m/%Y")
     if info:
 
         noi_dung = f"""
@@ -2659,8 +2665,8 @@ def xu_ly_yeu_cau(id):
 
 Xe: {info['plate']}
 Tài xế: {info['name']}
-Thời gian đi: {yc['ngay_di']}
-Thời gian về: {yc['ngay_ve']}
+Thời gian đi: {ngay_di_dep}
+Thời gian về: {ngay_ve_dep}
 Người yêu cầu: {yc['nguoi_yeu_cau']} 
 Nội dung:
 {yc['muc_dich']}
