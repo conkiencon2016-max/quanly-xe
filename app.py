@@ -294,7 +294,8 @@ def dieu_xe():
             drivers.name AS driver_name,
             vehicles.start_time,
             vehicles.end_time,
-            vehicles.work_content
+            vehicles.work_content,
+            vehicles.requester
         FROM vehicles
         LEFT JOIN drivers ON vehicles.driver_id = drivers.id
         {sql_filter}
@@ -346,7 +347,8 @@ def dieu_xe():
             start,
             end,
             duration,
-            v["work_content"]
+            v["work_content"],
+            v["requester"]
         ))
 
     con.close()
