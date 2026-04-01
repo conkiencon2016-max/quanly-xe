@@ -499,7 +499,8 @@ def stop(vid):
                 vehicles.km,
                 drivers.name AS driver_name,
                 vehicles.start_time,
-                vehicles.work_content
+                vehicles.work_content,
+                vehicles.requester
             FROM vehicles
             LEFT JOIN drivers ON vehicles.driver_id = drivers.id
             WHERE vehicles.id = ?
@@ -531,9 +532,10 @@ def stop(vid):
                 end_time,
                 duration_minutes,
                 work_content,
-                km_travel
+                km_travel,
+                requester
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             trip["id"],
             trip["plate"],
@@ -542,7 +544,8 @@ def stop(vid):
             end_time,
             duration_minutes,
             trip["work_content"],
-            km_travel
+            km_travel,
+            trip["requester"]
         ))
 
         # 4️⃣ CỘNG DỒN KM VÀO XE
@@ -562,7 +565,8 @@ def stop(vid):
                 driver_id = NULL,
                 start_time = NULL,
                 end_time = NULL,
-                work_content = NULL
+                work_content = NULL,
+                requester = NULL
             WHERE id = ?
         """, (vid,))
 
