@@ -2654,9 +2654,9 @@ def xu_ly_yeu_cau(id):
     # =========================
     # 🔥 GỬI ZALO + TELEGRAM
     # =========================
-    ngaydi_dt = datetime.fromisoformat(ngay_di)
+    ngaydi_dt = datetime.fromisoformat(yc['ngay_di'])
     ngay_di_dep = ngaydi_dt.strftime("%H:%M ngày %d/%m/%Y")
-    ngayve_dt = datetime.fromisoformat(ngay_ve)
+    ngayve_dt = datetime.fromisoformat(yc['ngay_ve'])
     ngay_ve_dep = ngayve_dt.strftime("%H:%M ngày %d/%m/%Y")
     if info:
 
