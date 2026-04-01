@@ -398,4 +398,15 @@ tbody tr:hover{
 .excel-btn:hover {
     background: #047857;
 }
+.btn-reset{
+    background:#ef4444;
+    color:white;
+    padding:8px 12px;
+    border-radius:6px;
+    text-decoration:none;
+    font-weight:600;
+}
 
+.btn-reset:hover{
+    background:#dc2626;
+}
