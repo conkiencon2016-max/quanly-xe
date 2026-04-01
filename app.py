@@ -2646,7 +2646,7 @@ def xu_ly_yeu_cau(id):
          FROM vehicles v
          JOIN drivers d ON v.driver_id = d.id
          WHERE v.id = ?
-    """, (driver_id, vehicle_id)).fetchone()
+    """, (vehicle_id)).fetchone()
     con.commit()
     con.close()
     # =========================
