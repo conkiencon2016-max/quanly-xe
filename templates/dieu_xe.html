@@ -305,6 +305,7 @@ input[type="number"] {
 <tr>
     <th>Xe</th>
     <th>Trạng thái</th>
+	<th>Người công tác</th>
     <th>Tài xế</th>
     <th>Ngày đi</th>
     <th>Ngày về</th>
@@ -330,7 +331,7 @@ input[type="number"] {
     <td data-label="Tài xế">{{ v[3] or "-" }}</td>
     <td data-label="Ngày đi">{{ v[4] or "-" }}</td>
     <td data-label="Ngày về">{{ v[5] or "-" }}</td>
-
+    <td data-label="Người yêu cầu">{{ v[8] or "-" }}</td>
 <td data-label="Số KM">
     {% if v[2] == 1 %}
         <input type="number"
@@ -356,13 +357,19 @@ input[type="number"] {
                 {% endfor %}
             </select>
 
-            <input type="datetime-local" name="start_time" required>
-            
+            <input type="datetime-local" name="start_time" required
+       placeholder="Thời gian đi">
 
-            <textarea name="work_content" rows="2"
-                placeholder="Nhập nội dung công tác..." required>
+<input type="datetime-local" name="end_time"
+       placeholder="Thời gian về">
 
-            </textarea>
+<input type="text" name="requester"
+       placeholder="Nhập người yêu cầu (VD: Lê Văn A)" required>
+
+<textarea name="work_content" rows="2"
+    placeholder="Nhập nội dung công tác (VD: đi họp, kiểm tra...)"
+    required>
+</textarea>
 
             <button class="start" type="submit">Điều xe</button>
         </form>
