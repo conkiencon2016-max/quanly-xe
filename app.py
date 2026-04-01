@@ -2526,14 +2526,14 @@ def danh_sach_yeu_cau():
 
     # lọc từ ngày
     if tu_ngay:
-        sql += " AND DATE(ngay_di) >= DATE(?)"
+        sql += " AND date(substr(ngay_di,1,10)) >= date(?)"
         params.append(tu_ngay)
 
     # lọc đến ngày
     if den_ngay:
-        sql += " AND DATE(ngay_di) <= DATE(?)"
+        sql += " AND date(substr(ngay_di,1,10)) <= date(?)"
         params.append(den_ngay)
-    sql += " ORDER BY created_at DESC"
+    sql += " ORDER BY id DESC"
 
     data_raw = con.execute(sql, params).fetchall()
 
