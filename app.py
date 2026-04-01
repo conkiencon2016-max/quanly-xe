@@ -2639,7 +2639,15 @@ def xu_ly_yeu_cau(id):
 
     con.commit()
     con.close()
-    
+    info = con.execute("""
+         SELECT v.plate,
+                d.name,
+                d.zalo_user_id,
+                d.telegram_chat_id
+         FROM vehicles v
+         JOIN drivers d ON d.id = ?
+         WHERE v.id = ?
+    """, (driver_id, vehicle_id)).fetchone()
     # =========================
     # 🔥 GỬI ZALO + TELEGRAM
     # =========================
@@ -2651,7 +2659,7 @@ def xu_ly_yeu_cau(id):
 Xe: {info['plate']}
 Tài xế: {info['name']}
 Thời gian đi: {yc['ngay_di']}
-Thời gian về: {yc['ngay_về']}
+Thời gian về: {yc['ngay_ve']}
 Người yêu cầu: {yc['nguoi_yeu_cau']} 
 Nội dung:
 {yc['muc_dich']}
