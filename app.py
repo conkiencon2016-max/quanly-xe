@@ -2637,17 +2637,18 @@ def xu_ly_yeu_cau(id):
         WHERE id=?
     """, (id,))
 
-    con.commit()
-    con.close()
+    
     info = con.execute("""
          SELECT v.plate,
                 d.name,
                 d.zalo_user_id,
                 d.telegram_chat_id
          FROM vehicles v
-         JOIN drivers d ON d.id = ?
+         JOIN drivers d ON v.driver_id = d.id
          WHERE v.id = ?
     """, (driver_id, vehicle_id)).fetchone()
+    con.commit()
+    con.close()
     # =========================
     # 🔥 GỬI ZALO + TELEGRAM
     # =========================
