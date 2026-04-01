@@ -391,7 +391,7 @@ def start(vid):
             SET status = 1,
                 driver_id = ?,
                 start_time = ?,
-                end_time = NULL,
+                end_time = ?,
                 work_content = ?,
                 requester = ?
             WHERE id = ?
@@ -422,8 +422,12 @@ def start(vid):
     # =============================
     start_dt = datetime.fromisoformat(start_time)
     thoi_gian_dep = start_dt.strftime("%H:%M ngày %d/%m/%Y")
-    end_dt = datetime.fromisoformat(end_time)
-    thoi_gian_dep1 = end_dt.strftime("%H:%M ngày %d/%m/%Y")
+    
+    if end_time:
+        end_dt = datetime.fromisoformat(end_time)
+        thoi_gian_dep1 = end_dt.strftime("%H:%M ngày %d/%m/%Y")
+    else:
+        thoi_gian_dep1 = "Chưa xác định"
     if info:
 
         noi_dung = f"""
