@@ -2603,7 +2603,7 @@ def xu_ly_yeu_cau(id):
     yc = con.execute("""
         SELECT * FROM yeu_cau_xe WHERE id=?
     """, (id,)).fetchone()
-
+    yc = dict(yc)
     if not yc:
         return "Không tìm thấy yêu cầu", 404
 
@@ -2654,10 +2654,17 @@ def xu_ly_yeu_cau(id):
     # =========================
     # 🔥 GỬI ZALO + TELEGRAM
     # =========================
-    ngaydi_dt = datetime.fromisoformat(yc["ngay_di"])
-    ngay_di_dep = ngaydi_dt.strftime("%H:%M ngày %d/%m/%Y")
-    ngayve_dt = datetime.fromisoformat(yc["ngay_ve"])
-    ngay_ve_dep = ngayve_dt.strftime("%H:%M ngày %d/%m/%Y")
+    try:
+         ngaydi_dt = datetime.fromisoformat(yc["ngay_di"])
+         ngay_di_dep = ngaydi_dt.strftime("%H:%M ngày %d/%m/%Y")
+    except:
+         ngay_di_dep = yc["ngay_di"]
+
+    try:
+         ngayve_dt = datetime.fromisoformat(yc["ngay_ve"])
+         ngay_ve_dep = ngayve_dt.strftime("%H:%M ngày %d/%m/%Y")
+    except:
+         ngay_ve_dep = yc["ngay_ve"]
     if info:
 
         noi_dung = f"""
