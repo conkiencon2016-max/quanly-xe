@@ -2751,7 +2751,12 @@ def sua_yeu_cau(id):
             request.form.get("diem_den"),
             id
         ))
-
+        con.execute("""
+        UPDATE vehicles
+        SET requester = ?, 
+            work_content = ?
+        WHERE yeu_cau_id = ?
+        """)
         con.commit()
         con.close()
 
