@@ -236,6 +236,72 @@ def home():
         username=session.get("username")
     )
 # =========================
+# ZALO CHO TAI XE (ĐÃ TỐI ƯU HÓA)
+# =========================
+def gui_zalo_cho_taixe(chat_id, noi_dung):
+
+    BOT_TOKEN = os.getenv("ZALO_BOT_TOKEN")
+
+    url = f"https://bot-api.zaloplatforms.com/bot{BOT_TOKEN}/sendMessage"
+
+    payload = {
+        "chat_id": chat_id,
+        "text": noi_dung
+    }
+
+    headers = {
+        "Content-Type": "application/json"
+    }
+
+    try:
+
+        r = requests.post(
+            url,
+            json=payload,
+            headers=headers,
+            timeout=10
+        )
+
+        print("Zalo status:", r.status_code)
+        print("Zalo response:", r.text)
+
+        if r.status_code == 200:
+            res = r.json()
+            return res.get("ok", False)
+
+        return False
+
+    except Exception as e:
+        print("❌ Lỗi gửi Zalo:", e)
+        return "OK"
+# =========================
+# telegram CHO TAI XE (ĐÃ TỐI ƯU HÓA)
+# =========================
+
+def send_telegram(chat_id, message):
+
+    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+
+    payload = {
+        "chat_id": chat_id,
+        "text": message,
+        "parse_mode": "HTML"
+    }
+
+    try:
+
+        r = requests.post(url, json=payload, timeout=10)
+
+        print("Telegram status:", r.status_code)
+        print("Telegram response:", r.text)
+
+        return r.status_code == 200
+
+    except Exception as e:
+
+        print("Telegram error:", e)
+        return "OK"
+# =========================
 # ĐIỀU XE (WEB CON)
 # =========================
 @app.route("/dieu-xe")
@@ -2349,72 +2415,7 @@ def telegram_webhook():
         print("Telegram webhook error:", e)
         return "OK"
 
-# =========================
-# ZALO CHO TAI XE (ĐÃ TỐI ƯU HÓA)
-# =========================
-def gui_zalo_cho_taixe(chat_id, noi_dung):
 
-    BOT_TOKEN = os.getenv("ZALO_BOT_TOKEN")
-
-    url = f"https://bot-api.zaloplatforms.com/bot{BOT_TOKEN}/sendMessage"
-
-    payload = {
-        "chat_id": chat_id,
-        "text": noi_dung
-    }
-
-    headers = {
-        "Content-Type": "application/json"
-    }
-
-    try:
-
-        r = requests.post(
-            url,
-            json=payload,
-            headers=headers,
-            timeout=10
-        )
-
-        print("Zalo status:", r.status_code)
-        print("Zalo response:", r.text)
-
-        if r.status_code == 200:
-            res = r.json()
-            return res.get("ok", False)
-
-        return False
-
-    except Exception as e:
-        print("❌ Lỗi gửi Zalo:", e)
-        return "OK"
-# =========================
-# telegram CHO TAI XE (ĐÃ TỐI ƯU HÓA)
-# =========================
-
-def send_telegram(chat_id, message):
-
-    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
-
-    payload = {
-        "chat_id": chat_id,
-        "text": message,
-        "parse_mode": "HTML"
-    }
-
-    try:
-
-        r = requests.post(url, json=payload, timeout=10)
-
-        print("Telegram status:", r.status_code)
-        print("Telegram response:", r.text)
-
-        return r.status_code == 200
-
-    except Exception as e:
-
-        print("Telegram error:", e)
-        return "OK"
 # =========================
 # Dashboard realtime xe đang chạy
 # =========================
