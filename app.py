@@ -443,36 +443,40 @@ def start(vid):
         requester = request.form.get("requester")
         end_time = request.form.get("end_time")
         # 🔥 check xe đang chạy
-            xe = con.execute("""
-                SELECT status FROM vehicles WHERE id=?
-            """, (vid,)).fetchone()
+        # 🔥 check xe đang chạy
+        xe = con.execute("""
+             SELECT status FROM vehicles WHERE id=?
+        """, (vid,)).fetchone()
 
-            if xe["status"] == 1:
-                return "Xe đang hoạt động!", 400
+        if xe["status"] == 1:
+            return "Xe đang hoạt động!", 400
 
             # 🔥 check driver chuẩn
-            busy = con.execute("""
-                SELECT id, plate FROM vehicles
-                WHERE status = 1 
-                AND driver_id = ?
-                AND start_time IS NOT NULL
-                LIMIT 1
-            """, (driver_id,)).fetchone()
+        busy = con.execute("""
+            SELECT id, plate FROM vehicles
+            WHERE status = 1 
+            AND driver_id = ?
+            AND start_time IS NOT NULL
+            LIMIT 1
+        """, (driver_id,)).fetchone()
 
-            if busy:
-                return f"Tài xế đang chạy xe {busy['plate']}", 400
+        if busy:
+            return f"Tài xế đang chạy xe {busy['plate']}", 400
 
             # 🔥 update atomic
-            execute_retry(con, """
-                UPDATE vehicles
-                SET status = 1,
-                    driver_id = ?,
-                    start_time = ?,
-                    end_time = ?,
-                    work_content = ?,
-                    requester = ?
-                WHERE id = ? AND status = 0
-            """, (driver_id, start_time, end_time, work_content, requester, vid))
+        execute_retry(con, """
+            UPDATE vehicles
+            SET status = 1,
+                driver_id = ?,
+                start_time = ?,
+                end_time = ?,
+                work_content = ?,
+                requester = ?
+            WHERE id = ? AND status = 0
+        """, (driver_id, start_time, end_time, work_content, requester, vid))
+
+        if con.total_changes == 0:
+            return "Xe vừa bị người khác điều!", 400
 
         # lấy thông tin xe + tài xế
         info = con.execute("""
