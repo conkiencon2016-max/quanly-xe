@@ -2646,7 +2646,7 @@ def xu_ly_yeu_cau(id):
     # =========================
     start_time = yc["ngay_di"] or datetime.now().isoformat()
     end_time = yc["ngay_ve"] or datetime.now().isoformat()
-    work_content = f"{yc['muc_dich']} với đồng chí {yc['nguoi_yeu_cau']} - ngày về {end_time}"
+    work_content = f"{yc['muc_dich']} với đồng chí {yc['nguoi_yeu_cau']}"
 
     execute_retry(con, """
         UPDATE vehicles
@@ -2654,9 +2654,10 @@ def xu_ly_yeu_cau(id):
             driver_id=?,
             start_time=?,
             end_time=?,
-            work_content=?
+            work_content=?,
+            requester=?
         WHERE id=?
-    """, (driver_id, start_time, end_time, work_content, vehicle_id))
+    """, (driver_id, start_time, end_time, work_content, requester, vehicle_id))
 
     # =========================
     # CẬP NHẬT YÊU CẦU
