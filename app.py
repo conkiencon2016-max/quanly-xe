@@ -442,6 +442,7 @@ def start(vid):
         work_content = request.form["work_content"]
         requester = request.form.get("requester")
         end_time = request.form.get("end_time")
+        yeu_cau_id = request.form.get("yeu_cau_id")
         # 🔥 check xe đang chạy
         # 🔥 check xe đang chạy
         xe = con.execute("""
@@ -471,9 +472,10 @@ def start(vid):
                 start_time = ?,
                 end_time = ?,
                 work_content = ?,
-                requester = ?
+                requester = ?,
+                yeu_cau_id = ?
             WHERE id = ? AND status = 0
-        """, (driver_id, start_time, end_time, work_content, requester, vid))
+        """, (driver_id, start_time, end_time, work_content, requester, yeu_cau_id, vid))
 
         if con.total_changes == 0:
             return "Xe vừa bị người khác điều!", 400
@@ -715,7 +717,7 @@ def stop_driver(vid):
             INSERT INTO trip_history (
                 vehicle_id, plate, driver_name,
                 start_time, end_time,
-                duration_minutes, work_content, km_travel
+                duration_minutes, work_content, km_travel, requester
             )
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """, (
@@ -726,7 +728,8 @@ def stop_driver(vid):
             end_time,
             duration_minutes,
             trip["work_content"],
-            km_travel
+            km_travel,
+            trip["requester"]
         ))
 
         # Reset xe
@@ -739,7 +742,9 @@ def stop_driver(vid):
                 driver_id=NULL,
                 start_time=NULL,
                 end_time=NULL,
-                work_content=NULL
+                work_content=NULL,
+                yeu_cau_id = NULL,
+                yeu_cau_id = NULL
             WHERE id=?
         """, (new_km, vid))
 
@@ -2669,9 +2674,10 @@ def xu_ly_yeu_cau(id):
             start_time=?,
             end_time=?,
             work_content=?,
-            requester=?
+            requester=?,
+            yeu_cau_id=?
         WHERE id=? AND status=0
-    """, (driver_id, start_time, end_time, work_content, requester, vehicle_id))
+    """, (driver_id, start_time, end_time, work_content, requester, id, vehicle_id))
     if con.total_changes == 0:
         return "Xe đã được điều bởi người khác", 400
     # =========================
