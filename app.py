@@ -2646,7 +2646,8 @@ def xu_ly_yeu_cau(id):
     # =========================
     start_time = yc["ngay_di"] or datetime.now().isoformat()
     end_time = yc["ngay_ve"] or datetime.now().isoformat()
-    work_content = f"{yc['muc_dich']} với đồng chí {yc['nguoi_yeu_cau']}"
+    requester = yc["nguoi_yeu_cau"]
+    work_content = f"{yc['muc_dich']}"
 
     execute_retry(con, """
         UPDATE vehicles
@@ -2703,7 +2704,7 @@ Xe: {info['plate']}
 Tài xế: {info['name']}
 Thời gian đi: {ngay_di_dep}
 Thời gian về: {ngay_ve_dep}
-Người yêu cầu: {yc['nguoi_yeu_cau']} 
+Người đi công tác: {yc['nguoi_yeu_cau']} 
 Nội dung:
 {yc['muc_dich']}
 """
