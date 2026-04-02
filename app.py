@@ -2659,7 +2659,7 @@ def xu_ly_yeu_cau(id):
     # =========================
     start_time = yc["ngay_di"] or datetime.now().isoformat()
     end_time = yc["ngay_ve"] or datetime.now().isoformat()
-    requester = yc["nguoi_yeu_cau"]
+    requester = f"{yc['nguoi_yeu_cau']}"
     work_content = f"{yc['muc_dich']}"
 
     execute_retry(con, """
