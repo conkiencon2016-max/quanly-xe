@@ -2631,7 +2631,7 @@ def xu_ly_yeu_cau(id):
     yc = con.execute("""
         SELECT * FROM yeu_cau_xe WHERE id=?
     """, (id,)).fetchone()
-     if not yc:
+    if not yc:
         return "Không tìm thấy yêu cầu", 404
     yc = dict(yc)
    
