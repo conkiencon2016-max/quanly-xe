@@ -376,26 +376,37 @@ def start(vid):
         work_content = request.form["work_content"]
         requester = request.form.get("requester")
         end_time = request.form.get("end_time")
-        # kiểm tra tài xế bận
-        busy = con.execute("""
-            SELECT 1 FROM vehicles
-            WHERE status = 1 AND driver_id = ?
-        """, (driver_id,)).fetchone()
+        # 🔥 check xe đang chạy
+            xe = con.execute("""
+                SELECT status FROM vehicles WHERE id=?
+            """, (vid,)).fetchone()
 
-        if busy:
-            return "Lỗi: Tài xế đang lái xe khác!", 400
+            if xe["status"] == 1:
+                return "Xe đang hoạt động!", 400
 
-        # cập nhật xe
-        execute_retry(con, """
-            UPDATE vehicles
-            SET status = 1,
-                driver_id = ?,
-                start_time = ?,
-                end_time = ?,
-                work_content = ?,
-                requester = ?
-            WHERE id = ?
-        """, (driver_id, start_time, end_time, work_content, requester, vid))
+            # 🔥 check driver chuẩn
+            busy = con.execute("""
+                SELECT id, plate FROM vehicles
+                WHERE status = 1 
+                AND driver_id = ?
+                AND start_time IS NOT NULL
+                LIMIT 1
+            """, (driver_id,)).fetchone()
+
+            if busy:
+                return f"Tài xế đang chạy xe {busy['plate']}", 400
+
+            # 🔥 update atomic
+            execute_retry(con, """
+                UPDATE vehicles
+                SET status = 1,
+                    driver_id = ?,
+                    start_time = ?,
+                    end_time = ?,
+                    work_content = ?,
+                    requester = ?
+                WHERE id = ? AND status = 0
+            """, (driver_id, start_time, end_time, work_content, requester, vid))
 
         # lấy thông tin xe + tài xế
         info = con.execute("""
