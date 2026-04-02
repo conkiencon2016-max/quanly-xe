@@ -2634,7 +2634,16 @@ def xu_ly_yeu_cau(id):
     if not yc:
         return "Không tìm thấy yêu cầu", 404
     yc = dict(yc)
-   
+   vehicle_id = request.form.get("vehicle_id")
+    driver_id = request.form.get("driver_id")
+
+    if not vehicle_id or not driver_id:
+        return "Thiếu xe hoặc tài xế", 400
+    # ÉP KIỂU (RẤT NÊN LÀM)
+    driver_id = int(driver_id)
+    vehicle_id = int(vehicle_id)
+
+   # CHECK BẬN
     busy = con.execute("""
         SELECT 1 FROM vehicles
         WHERE status=1 AND driver_id=?
@@ -2643,11 +2652,7 @@ def xu_ly_yeu_cau(id):
     if busy:
         return "Tài xế đang bận", 400
         
-    vehicle_id = request.form.get("vehicle_id")
-    driver_id = request.form.get("driver_id")
-
-    if not vehicle_id or not driver_id:
-        return "Thiếu xe hoặc tài xế", 400
+    
     
     # =========================
     # CẬP NHẬT XE
