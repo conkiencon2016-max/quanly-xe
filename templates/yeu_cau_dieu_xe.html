@@ -101,13 +101,14 @@
 </form>
 
 </div>
+    <div class="card">
 <div class="card" style="margin-bottom:15px">
 
-<form method="get" style="display:flex; gap:10px; flex-wrap:wrap">
+<form method="get" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center">
 
     <input type="text"
            name="search_name"
-           placeholder="Người yêu cầu"
+           placeholder="Người đi công tác"
            value="{{ search_name or '' }}"
            style="padding:8px; border-radius:6px; border:1px solid #ccc">
 
@@ -121,10 +122,12 @@
            value="{{ den_ngay or '' }}"
            style="padding:8px; border-radius:6px; border:1px solid #ccc">
 
-    <button class="btn-add">🔍 Tìm kiếm</button>
-   <a href="/danh-sach-yeu-cau?" class="btn-reset">
+    <button class="btn">🔍 Tìm kiếm</button>
+
+    <a href="/danh-sach-yeu-cau" class="btn-reset">
     ⟲ Reset
 </a>
+
 </form>
 
 </div>
