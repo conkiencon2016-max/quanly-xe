@@ -2634,7 +2634,7 @@ def xu_ly_yeu_cau(id):
     if not yc:
         return "Không tìm thấy yêu cầu", 404
     yc = dict(yc)
-   vehicle_id = request.form.get("vehicle_id")
+    vehicle_id = request.form.get("vehicle_id")
     driver_id = request.form.get("driver_id")
 
     if not vehicle_id or not driver_id:
