@@ -301,6 +301,7 @@ def send_telegram(chat_id, message):
 
         print("Telegram error:", e)
         return "OK"
+
 # =========================
 # ĐIỀU XE (WEB CON)
 # =========================
@@ -442,29 +443,16 @@ def start(vid):
         work_content = request.form["work_content"]
         requester = request.form.get("requester")
         end_time = request.form.get("end_time")
-        yeu_cau_id = request.form.get("yeu_cau_id")
-        # 🔥 check xe đang chạy
-        # 🔥 check xe đang chạy
-        xe = con.execute("""
-             SELECT status FROM vehicles WHERE id=?
-        """, (vid,)).fetchone()
-
-        if xe["status"] == 1:
-            return "Xe đang hoạt động!", 400
-
-            # 🔥 check driver chuẩn
+        # kiểm tra tài xế bận
         busy = con.execute("""
-            SELECT id, plate FROM vehicles
-            WHERE status = 1 
-            AND driver_id = ?
-            AND start_time IS NOT NULL
-            LIMIT 1
+            SELECT 1 FROM vehicles
+            WHERE status = 1 AND driver_id = ?
         """, (driver_id,)).fetchone()
 
         if busy:
-            return f"Tài xế đang chạy xe {busy['plate']}", 400
+            return "Lỗi: Tài xế đang lái xe khác!", 400
 
-            # 🔥 update atomic
+        # cập nhật xe
         execute_retry(con, """
             UPDATE vehicles
             SET status = 1,
@@ -472,13 +460,9 @@ def start(vid):
                 start_time = ?,
                 end_time = ?,
                 work_content = ?,
-                requester = ?,
-                yeu_cau_id = ?
-            WHERE id = ? AND status = 0
-        """, (driver_id, start_time, end_time, work_content, requester, yeu_cau_id, vid))
-
-        if con.total_changes == 0:
-            return "Xe vừa bị người khác điều!", 400
+                requester = ?
+            WHERE id = ?
+        """, (driver_id, start_time, end_time, work_content, requester, vid))
 
         # lấy thông tin xe + tài xế
         info = con.execute("""
@@ -717,7 +701,7 @@ def stop_driver(vid):
             INSERT INTO trip_history (
                 vehicle_id, plate, driver_name,
                 start_time, end_time,
-                duration_minutes, work_content, km_travel, requester
+                duration_minutes, work_content, km_travel
             )
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """, (
@@ -728,8 +712,7 @@ def stop_driver(vid):
             end_time,
             duration_minutes,
             trip["work_content"],
-            km_travel,
-            trip["requester"]
+            km_travel
         ))
 
         # Reset xe
@@ -742,9 +725,7 @@ def stop_driver(vid):
                 driver_id=NULL,
                 start_time=NULL,
                 end_time=NULL,
-                work_content=NULL,
-                yeu_cau_id = NULL,
-                yeu_cau_id = NULL
+                work_content=NULL
             WHERE id=?
         """, (new_km, vid))
 
@@ -2424,7 +2405,6 @@ def telegram_webhook():
         print("Telegram webhook error:", e)
         return "OK"
 
-
 # =========================
 # Dashboard realtime xe đang chạy
 # =========================
@@ -2636,36 +2616,22 @@ def xu_ly_yeu_cau(id):
     yc = con.execute("""
         SELECT * FROM yeu_cau_xe WHERE id=?
     """, (id,)).fetchone()
+    yc = dict(yc)
     if not yc:
         return "Không tìm thấy yêu cầu", 404
-    yc = dict(yc)
+
     vehicle_id = request.form.get("vehicle_id")
     driver_id = request.form.get("driver_id")
 
     if not vehicle_id or not driver_id:
         return "Thiếu xe hoặc tài xế", 400
-    # ÉP KIỂU (RẤT NÊN LÀM)
-    driver_id = int(driver_id)
-    vehicle_id = int(vehicle_id)
 
-   # CHECK BẬN
-    busy = con.execute("""
-        SELECT 1 FROM vehicles
-        WHERE status=1 AND driver_id=?
-    """, (driver_id,)).fetchone()
-
-    if busy:
-        return "Tài xế đang bận", 400
-        
-    
-    
     # =========================
     # CẬP NHẬT XE
     # =========================
     start_time = yc["ngay_di"] or datetime.now().isoformat()
     end_time = yc["ngay_ve"] or datetime.now().isoformat()
-    requester = f"{yc['nguoi_yeu_cau']}"
-    work_content = f"{yc['muc_dich']}"
+    work_content = f"{yc['muc_dich']} với đồng chí {yc['nguoi_yeu_cau']} - ngày về {end_time}"
 
     execute_retry(con, """
         UPDATE vehicles
@@ -2673,13 +2639,10 @@ def xu_ly_yeu_cau(id):
             driver_id=?,
             start_time=?,
             end_time=?,
-            work_content=?,
-            requester=?,
-            yeu_cau_id=?
-        WHERE id=? AND status=0
-    """, (driver_id, start_time, end_time, work_content, requester, id, vehicle_id))
-    if con.total_changes == 0:
-        return "Xe đã được điều bởi người khác", 400
+            work_content=?
+        WHERE id=?
+    """, (driver_id, start_time, end_time, work_content, vehicle_id))
+
     # =========================
     # CẬP NHẬT YÊU CẦU
     # =========================
@@ -2724,12 +2687,12 @@ Xe: {info['plate']}
 Tài xế: {info['name']}
 Thời gian đi: {ngay_di_dep}
 Thời gian về: {ngay_ve_dep}
-Người đi công tác: {yc['nguoi_yeu_cau']} 
+Người yêu cầu: {yc['nguoi_yeu_cau']} 
 Nội dung:
 {yc['muc_dich']}
 """
 
-        if info["zalo_user_id"] and info["zalo_user_id"].strip():
+        if info["zalo_user_id"]:
             gui_zalo_cho_taixe(info["zalo_user_id"], noi_dung)
 
         if info["telegram_chat_id"]:
@@ -2771,12 +2734,7 @@ def sua_yeu_cau(id):
             request.form.get("diem_den"),
             id
         ))
-        con.execute("""
-        UPDATE vehicles
-        SET requester = ?, 
-            work_content = ?
-        WHERE yeu_cau_id = ?
-        """)
+
         con.commit()
         con.close()
 
