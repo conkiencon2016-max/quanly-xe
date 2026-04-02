@@ -2631,16 +2631,24 @@ def xu_ly_yeu_cau(id):
     yc = con.execute("""
         SELECT * FROM yeu_cau_xe WHERE id=?
     """, (id,)).fetchone()
-    yc = dict(yc)
-    if not yc:
+     if not yc:
         return "Không tìm thấy yêu cầu", 404
+    yc = dict(yc)
+   
+    busy = con.execute("""
+        SELECT 1 FROM vehicles
+        WHERE status=1 AND driver_id=?
+    """, (driver_id,)).fetchone()
 
+    if busy:
+        return "Tài xế đang bận", 400
+        
     vehicle_id = request.form.get("vehicle_id")
     driver_id = request.form.get("driver_id")
 
     if not vehicle_id or not driver_id:
         return "Thiếu xe hoặc tài xế", 400
-
+    
     # =========================
     # CẬP NHẬT XE
     # =========================
@@ -2657,9 +2665,10 @@ def xu_ly_yeu_cau(id):
             end_time=?,
             work_content=?,
             requester=?
-        WHERE id=?
+        WHERE id=? AND status=0
     """, (driver_id, start_time, end_time, work_content, requester, vehicle_id))
-
+    if con.total_changes == 0:
+        return "Xe đã được điều bởi người khác", 400
     # =========================
     # CẬP NHẬT YÊU CẦU
     # =========================
@@ -2709,7 +2718,7 @@ Nội dung:
 {yc['muc_dich']}
 """
 
-        if info["zalo_user_id"]:
+        if info["zalo_user_id"] and info["zalo_user_id"].strip():
             gui_zalo_cho_taixe(info["zalo_user_id"], noi_dung)
 
         if info["telegram_chat_id"]:
