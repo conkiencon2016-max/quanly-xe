@@ -189,7 +189,17 @@ button:hover { opacity: 0.9; }
 .top-bar {
     margin-bottom: 12px;
 }
+/* ===== Thời gian đi ===== */
+	
+.dt-input:invalid::before {
+    content: "Nhập thời gian đi";
+    color: #9CA3AF;
+}
 
+.dt-input:focus::before,
+.dt-input:valid::before {
+    content: "";
+}
 /* ===== NÚT QUAY VỀ ===== */
 .btn-back {
     display: inline-block;
@@ -204,6 +214,17 @@ button:hover { opacity: 0.9; }
 
 .btn-back:hover {
     opacity: 0.9;
+}
+
+/* ===== Thời gian về ===== */
+	.dt1-input:invalid::before {
+    content: "Nhập thời gian về";
+    color: #9CA3AF;
+}
+
+.dt1-input:focus::before,
+.dt1-input:valid::before {
+    content: "";
 }
 /* ===== DASHBOARD ===== */
 .dashboard {
@@ -350,6 +371,10 @@ input[type="number"] {
     <td data-label="Thao tác" class="action-col">
         {% if v[2] == 0 %}
         <form method="post" action="/start/{{ v[0] }}">
+			<!-- 🔥 AUTO FILL ID -->
+    {% if yeu_cau %}
+<input type="hidden" name="auto_fill" value="{{ yeu_cau.id }}">
+{% endif %}
             <select name="driver_id" required>
                 <option value="">-- Chọn tài xế --</option>
                 {% for d in drivers %}
@@ -357,15 +382,19 @@ input[type="number"] {
                 {% endfor %}
             </select>
 
-            <input type="datetime-local" name="start_time" required
-       placeholder="Thời gian đi">
+            <input type="datetime-local"
+       name="start_time"
+       required
+       class="dt-input">
 
-<input type="datetime-local" name="end_time"
-       placeholder="Thời gian về">
+<input type="datetime-local"
+       name="start_time"
+       required
+       class="dt1-input">
 
 <input type="text"
        name="requester"
-       placeholder="Nhập người công tác"
+       placeholder="Nhập người công tác (VD: lê văn a...)"
        value="{{ yeu_cau.nguoi_yeu_cau if yeu_cau else '' }}"
        required>
 
