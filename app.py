@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, redirect, session
 import sqlite3
 from datetime import datetime, date, timedelta
 import requests
+from apscheduler.schedulers.background import BackgroundScheduler
 from functools import wraps
 from werkzeug.security import generate_password_hash, check_password_hash
 import os
@@ -3008,21 +3009,25 @@ def keep_alive():
         time.sleep(300)
 
 threading.Thread(target=keep_alive, daemon=True).start()
-# ===== SCHEDULER =====
+# ===== START SCHEDULER CHO RENDER =====
 scheduler = BackgroundScheduler()
 
 def start_scheduler():
 
-    if scheduler.running:
-        return   # tránh chạy lại
-
     scheduler.add_job(auto_backup, 'cron', hour=16, minute=0)
     scheduler.add_job(backup_job, 'cron', hour=16, minute=10)
 
-    scheduler.start()
-    print("✅ Auto backup scheduler started")
+    if not scheduler.running:
+        scheduler.start()
+        print("Auto backup scheduler started")
 
+start_scheduler()
 
-# ===== START SCHEDULER CHO RENDER (QUAN TRỌNG) =====
-if os.environ.get("RENDER") == "true":
-    start_scheduler()
+if __name__ == "__main__":
+
+    port = int(os.environ.get("PORT", 10000))
+
+    print("Server đang chạy...")
+   
+    app.run(host="0.0.0.0", port=port)
+
