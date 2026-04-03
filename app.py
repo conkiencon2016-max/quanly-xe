@@ -443,6 +443,25 @@ def start(vid):
         work_content = request.form["work_content"]
         requester = request.form.get("requester")
         end_time = request.form.get("end_time")
+
+        # 🔥 nếu có auto_fill → lấy chuẩn từ bảng yêu cầu
+        auto_id = request.args.get("auto_fill")
+        if auto_id:
+            yc = con.execute("""
+            SELECT nguoi_yeu_cau
+            FROM yeu_cau_xe
+            WHERE id=?
+        """, (auto_id,)).fetchone()
+
+        if yc and yc["nguoi_yeu_cau"]:
+            requester = yc["nguoi_yeu_cau"]
+        # chống double click
+        vehicle_busy = con.execute("""
+            SELECT status FROM vehicles WHERE id=?
+        """, (vid,)).fetchone()
+
+        if vehicle_busy["status"] == 1:
+            return redirect("/dieu-xe") 
         # kiểm tra tài xế bận
         busy = con.execute("""
             SELECT 1 FROM vehicles
