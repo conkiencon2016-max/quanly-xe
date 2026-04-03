@@ -445,7 +445,8 @@ def start(vid):
         end_time = request.form.get("end_time")
 
         # 🔥 nếu có auto_fill → lấy chuẩn từ bảng yêu cầu
-        auto_id = request.args.get("auto_fill")
+        auto_id = request.form.get("auto_fill")   # ✅ FIX ĐÚNG
+        yc = None   # ✅ FIX QUAN TRỌNG
         if auto_id:
             yc = con.execute("""
             SELECT nguoi_yeu_cau
