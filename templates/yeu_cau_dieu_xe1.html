@@ -1,0 +1,346 @@
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Danh sách yêu cầu</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+body{
+    margin:0;
+    font-family:Segoe UI,Arial;
+    background:linear-gradient(135deg,#0f172a,#1e3a8a);
+}
+.dashboard {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px,1fr));
+    gap: 18px;
+    margin-bottom: 20px;
+}
+
+.dash-box {
+    background: rgba(255,255,255,0.95);
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.08);
+    transition: 0.3s;
+    cursor: pointer;
+    position: relative;
+}
+
+.dash-box:hover {
+    transform: translateY(-4px);
+}
+
+.dash-title {
+    font-size: 14px;
+    color: #6B7280;
+}
+
+.dash-number {
+    font-size: 30px;
+    font-weight: 700;
+    margin-top: 6px;
+}
+
+.dash-total { border-left: 6px solid #2563EB; }
+.dash-active { border-left: 6px solid #F59E0B; }
+.dash-home { border-left: 6px solid #16A34A; }
+
+.dash-icon {
+    position: absolute;
+    right: 14px;
+    top: 14px;
+    font-size: 24px;
+    opacity: 0.25;
+}
+/* layout */
+.overlay{
+    padding:20px;
+}
+
+/* header */
+.header{
+    text-align:center;
+    margin:20px 0;
+}
+
+.header h2{
+    background:linear-gradient(90deg,#3b82f6,#06b6d4);
+    padding:14px;
+    border-radius:12px;
+    color:white;
+}
+
+/* back */
+.back-link{
+    color:#38bdf8;
+    text-decoration:none;
+    font-weight:600;
+}
+
+/* card */
+.card{
+    background:#fff;
+    border-radius:16px;
+    padding:15px;
+    box-shadow:0 10px 30px rgba(0,0,0,0.2);
+    overflow-x:auto;
+}
+
+/* table */
+table{
+    width:100%;
+    min-width:1200px; /* 🔥 FIX QUAN TRỌNG */
+    border-collapse:collapse;
+    font-size:14px;
+}
+
+th{
+    background:#f1f5f9;
+    padding:12px;
+    text-align:center;
+    font-weight:600;
+}
+
+td{
+    padding:10px;
+    text-align:center;
+    border-bottom:1px solid #eee;
+}
+
+/* zebra */
+tr:nth-child(even){
+    background:#f9fafb;
+}
+
+/* status */
+.badge{
+    padding:4px 10px;
+    border-radius:999px;
+    font-size:13px;
+    font-weight:600;
+}
+
+.wait{
+    background:#fef3c7;
+    color:#b45309;
+}
+
+.done{
+    background:#dcfce7;
+    color:#15803d;
+}
+
+/* fix nội dung dài */
+td:nth-child(5),
+td:nth-child(6),
+td:nth-child(9){
+    max-width:160px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+}
+
+/* form xử lý */
+.action-form{
+    display:flex;
+    gap:6px;
+    align-items:center;
+    justify-content:center;
+}
+
+/* select */
+select{
+    padding:5px;
+    border-radius:6px;
+    border:1px solid #ccc;
+    font-size:13px;
+}
+
+/* button */
+.btn{
+    background:#2563eb;
+    color:white;
+    border:none;
+    padding:6px 10px;
+    border-radius:6px;
+    cursor:pointer;
+    font-size:13px;
+}
+
+.btn:hover{
+    background:#1d4ed8;
+}
+
+/* trạng thái done */
+.status-on{
+    color:#16a34a;
+    font-weight:600;
+}
+
+/* responsive mobile */
+@media(max-width:768px){
+    table{
+        font-size:12px;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<div class="overlay">
+
+<a href="/" class="back-link">⬅ Trang chủ</a>
+
+<div class="header">
+    <h2>📋 DANH SÁCH YÊU CẦU ĐIỀU XE</h2>
+</div>
+<div class="dashboard">
+
+    <div class="dash-box dash-total" onclick="location.href='?'">
+    
+        <div class="dash-title">Tổng yêu cầu</div>
+        <div class="dash-number">{{ tong }}</div>
+        <div class="dash-icon">📊</div>
+    </div>
+
+    
+     <div class="dash-box dash-active"
+     onclick="location.href='?status=cho_duyet'">
+        <div class="dash-title">Chờ duyệt</div>
+        <div class="dash-number">{{ cho }}</div>
+        <div class="dash-icon">🟡</div>
+    </div>
+
+    
+    <div class="dash-box dash-active"
+     onclick="location.href='?status=da_duyet'">
+        <div class="dash-title">Đã duyệt</div>
+        <div class="dash-number">{{ da }}</div>
+        <div class="dash-icon">🟢</div>
+    </div>
+
+</div>
+<div class="card">
+<div class="card" style="margin-bottom:15px">
+
+<form method="get" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center">
+
+    <input type="text"
+           name="search_name"
+           placeholder="Người đi công tác"
+           value="{{ search_name or '' }}"
+           style="padding:8px; border-radius:6px; border:1px solid #ccc">
+
+    <input type="date"
+           name="tu_ngay"
+           value="{{ tu_ngay or '' }}"
+           style="padding:8px; border-radius:6px; border:1px solid #ccc">
+
+    <input type="date"
+           name="den_ngay"
+           value="{{ den_ngay or '' }}"
+           style="padding:8px; border-radius:6px; border:1px solid #ccc">
+
+    <button class="btn">🔍 Tìm kiếm</button>
+
+    <a href="/danh-sach-yeu-cau" class="btn-reset">
+    ⟲ Reset
+</a>
+
+</form>
+
+</div>
+<table>
+<thead>
+<tr>
+    <th>STT</th>
+    <th>Người</th>
+    <th>Trạng thái</th>
+    <th>Số người đi</th>
+    <th>Điểm đón</th>
+    <th>Điểm đến</th>
+    <th>Ngày đi</th>
+    <th>Ngày về</th>
+    <th>Nội dung</th>
+    <th style="min-width:280px">Xử lý</th> <!-- 🔥 FIX -->
+</tr>
+</thead>
+
+<tbody>
+{% for r in data %}
+<tr>
+
+<td>{{ loop.index }}</td>
+<td><b>{{ r.nguoi_yeu_cau }}</b></td>
+
+<td>
+{% if r.trang_thai == "cho_duyet" %}
+<span class="badge wait">Chờ</span>
+{% else %}
+<span class="badge done">Đã duyệt</span>
+{% endif %}
+</td>
+
+<td>{{ r.so_hanh_khach }}</td>
+<td title="{{ r.diem_don }}">{{ r.diem_don }}</td>
+<td title="{{ r.diem_den }}">{{ r.diem_den }}</td>
+
+<td>{{ r.ngay_di_dep }}</td>
+<td>{{ r.ngay_ve_dep }}</td>
+<td title="{{ r.muc_dich }}">{{ r.muc_dich }}</td>
+
+<td>
+
+{% if r.trang_thai == "cho_duyet" %}
+
+<form method="post" action="/xu-ly-yeu-cau/{{ r.id }}?auto_fill={{ r.id }}">
+
+<select name="vehicle_id" required>
+<option value="">Xe</option>
+{% for v in vehicles %}
+<option value="{{ v.id }}">{{ v.plate }}</option>
+{% endfor %}
+</select>
+
+<select name="driver_id" required>
+<option value="">Tài xế</option>
+{% for d in drivers %}
+<option value="{{ d.id }}">{{ d.name }}</option>
+{% endfor %}
+</select>
+
+<button class="btn">🚗 Điều xe</button>
+<a href="/xoa-yeu-cau/{{ r.id }}"
+   class="btn"
+   onclick="return confirm('Xóa yêu cầu này?')">
+   🗑️ Xóa
+</a>
+</form>
+<!-- 🔥 THÊM -->
+
+
+{% else %}
+
+<span class="status-on">✔</span>
+
+<!-- 🔥 vẫn cho sửa -->
+<a href="/sua-yeu-cau/{{ r.id }}" class="btn">✏️ Sửa</a>
+
+{% endif %}
+
+</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+
+</div>
+
+</div>
+
+</body>
+</html>
