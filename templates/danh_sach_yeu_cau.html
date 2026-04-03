@@ -297,7 +297,7 @@ select{
 
 {% if r.trang_thai == "cho_duyet" %}
 
-<form method="post" action="/xu-ly-yeu-cau/{{ r.id }}" class="action-form">
+<form method="post" action="/xu-ly-yeu-cau/{{ r.id }}?auto_fill={{ r.id }}">
 
 <select name="vehicle_id" required>
 <option value="">Xe</option>
