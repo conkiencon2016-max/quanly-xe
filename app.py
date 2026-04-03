@@ -520,14 +520,15 @@ def start(vid):
         noi_dung = f"""
 🚗 THÔNG BÁO ĐIỀU XE
 
-Xe: {info['plate']}
 Tài xế: {info['name']}
+Xe: {info['plate']}
+Người đi công tác: {requester}
 Thời gian đi: {thoi_gian_dep}
 Thời gian về: {thoi_gian_dep1}
 Nội dung:
 {work_content}
 
-Vui lòng thực hiện theo phân công.
+Đồng chí liên hệ trực tiếp người đi công tác để biết chi tiết !
 """
 
         # gửi zalo
@@ -2702,15 +2703,15 @@ def xu_ly_yeu_cau(id):
     if info:
 
         noi_dung = f"""
-🚗 ĐIỀU XE 
-
-Xe: {info['plate']}
+🚗 THÔNG BÁO ĐIỀU XE 
 Tài xế: {info['name']}
+Xe: {info['plate']}
+Người đi công tác: {yc['nguoi_yeu_cau']}
 Thời gian đi: {ngay_di_dep}
 Thời gian về: {ngay_ve_dep}
-Người yêu cầu: {yc['nguoi_yeu_cau']} 
-Nội dung:
+ Nội dung:
 {yc['muc_dich']}
+Đồng chí liên hệ trực tiếp người đi công tác để biết chi tiết !
 """
 
         if info["zalo_user_id"]:
