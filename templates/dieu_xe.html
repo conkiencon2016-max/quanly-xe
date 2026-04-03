@@ -382,16 +382,14 @@ input[type="number"] {
                 {% endfor %}
             </select>
 
-            <input type="datetime-local"
-       name="start_time"
-       required
-       class="dt-input">
-
+           
 <label>📅 Thời gian đi</label>
 <input type="datetime-local" name="start_time" required>
 
-<<label>📅 Thời gian về</label>
+<label>📅 Thời gian về</label>
 <input type="datetime-local" name="end_time" required>
+<input type="text" name="requester"
+       placeholder="Nhập người yêu cầu (VD: Lê Văn A)" required>
 
 <textarea name="work_content" rows="2"
     placeholder="Nhập nội dung công tác (VD: đi họp, kiểm tra...)"
