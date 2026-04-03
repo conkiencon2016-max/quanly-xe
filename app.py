@@ -17,6 +17,7 @@ from collections import defaultdict
 import re
 import threading
 from apscheduler.schedulers.background import BackgroundScheduler
+DB = "fleet.db"
 # =========================
 # FORMAT DATETIME (GLOBAL)
 # =========================
@@ -2812,6 +2813,8 @@ def xoa_user(id):
 # sao lưu dữ liệu
 # =========================
 @app.route("/backup")
+@login_required
+@admin_required
 def backup():
 
     return send_file(
@@ -2853,8 +2856,9 @@ def restore_backup(filename):
 
     if not os.path.exists(backup_file):
         return "File backup không tồn tại!"
-
-    shutil.copy(backup_file, DB)
+    con = db()
+    con.close()
+    os.replace(backup_file, DB)
     return "Khôi phục database thành công! Hãy reload trang."
 # ================= backup_manager =================
 
@@ -2912,9 +2916,11 @@ def auto_backup():
         now = datetime.now()
         today = now.strftime("%Y%m%d_%H%M%S")
 
-        backup_file = f"{BACKUP_DIR}/conglenh_{today}.db"
-
-        shutil.copy(DB, backup_file)
+        backup_file = f"{BACKUP_DIR}/quanlyxe_{today}.db"
+        con = db()
+        backup_path = backup_path.replace("'", "''")
+        con.execute(f"VACUUM INTO '{backup_path}'")
+        con.close()
 
         size = os.path.getsize(backup_file) / (1024*1024)
 
@@ -2942,18 +2948,39 @@ def auto_backup():
 
         print(log)
     subprocess.run(["python3", "backup_drive.py"])
-# ================= backup_now =================
 
+# =========================
+# backup now
+# =========================
 @app.route("/backup_now")
+@login_required
+@admin_required
 def backup_now():
 
-    if session.get("role") != "admin":
-        return "Không có quyền!"
+    try:
+        con = db()
 
-    auto_backup()
+        backup_dir = "backups"
+        os.makedirs(backup_dir, exist_ok=True)
 
-    return redirect("/backup_manager")
+        filename = f"fleet_{datetime.now().strftime('%Y%m%d_%H%M%S')}.db"
+        backup_path = os.path.join(backup_dir, filename)
 
+        # ✅ BACKUP CHUẨN SQLITE (KHÔNG LOCK)
+        con.execute(f"VACUUM INTO '{backup_path}'")
+
+        con.close()
+
+        return redirect("/backup_manager")
+
+    except Exception as e:
+        return f"Lỗi backup: {str(e)}", 500
+
+
+@app.before_request
+def trigger_backup():
+    if random.random() < 0.01:  # 1% request
+        threading.Thread(target=auto_backup).start()
 # =========================
 # chống ngủ server
 # =========================
