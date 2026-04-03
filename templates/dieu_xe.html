@@ -363,8 +363,11 @@ input[type="number"] {
 <input type="datetime-local" name="end_time"
        placeholder="Thời gian về">
 
-<input type="text" name="requester"
-       placeholder="Nhập người yêu cầu (VD: Lê Văn A)" required>
+<input type="text"
+       name="requester"
+       placeholder="Nhập người công tác"
+       value="{{ yeu_cau.nguoi_yeu_cau if yeu_cau else '' }}"
+       required>
 
 <textarea name="work_content" rows="2"
     placeholder="Nhập nội dung công tác (VD: đi họp, kiểm tra...)"
