@@ -2818,6 +2818,141 @@ def backup():
         as_attachment=True,
         download_name="fleet_backup.db"
     )
+    # ================= backup =================
+# ================= BACKUP DATABASE =================
+def backup_job():
+    try:
+        subprocess.run(["python3", "backup_drive.py"], check=True)
+        print("Backup Google Drive OK")
+    except Exception as e:
+        print("Backup Google Drive lỗi:", e)
+
+
+# ================= download_backup =================
+@app.route("/download_backup/<filename>")
+def download_backup(filename):
+
+    if session.get("role") != "admin":
+        return "Không có quyền!"
+
+    path = os.path.join("backups", filename)
+
+    if not os.path.exists(path):
+        return "File không tồn tại!"
+
+    return send_file(path, as_attachment=True)
+# ================= restore_backup =================
+@app.route("/restore_backup/<filename>")
+def restore_backup(filename):
+
+    if session.get("role") != "admin":
+        return "Không có quyền!"
+
+    backup_file = os.path.join("backups", filename)
+
+    if not os.path.exists(backup_file):
+        return "File backup không tồn tại!"
+
+    shutil.copy(backup_file, DB)
+    return "Khôi phục database thành công! Hãy reload trang."
+# ================= backup_manager =================
+
+@app.route("/backup_manager")
+def backup_manager():
+
+    if session.get("role") != "admin":
+        return "Không có quyền!"
+
+    BACKUP_DIR = "backups"
+    os.makedirs(BACKUP_DIR, exist_ok=True)
+
+    files = sorted(os.listdir(BACKUP_DIR), reverse=True)
+
+    file_data = []
+    total_size = 0
+
+    for f in files:
+
+        path = os.path.join(BACKUP_DIR, f)
+
+        if os.path.isfile(path):
+
+            size = os.path.getsize(path)
+            total_size += size
+
+            file_data.append({
+                "name": f,
+                "size": f"{size / (1024*1024):.2f} MB",
+                "raw_size": size
+            })
+
+    # ===== FILE MỚI NHẤT =====
+    latest = file_data[0]["name"] if file_data else "Chưa có"
+
+    # ===== STATUS =====
+    status = "OK" if file_data else "NO DATA"
+
+    return render_template(
+        "backup_manager.html",
+        files=file_data,
+        total_files=len(file_data),
+        total_size=f"{total_size/(1024*1024):.2f} MB",
+        latest=latest,
+        status=status
+    )
+# ================= AUTO BACKUP DATABASE =================
+def auto_backup():
+
+    try:
+
+        BACKUP_DIR = os.path.join(os.getcwd(), "backups")
+        os.makedirs(BACKUP_DIR, exist_ok=True)
+
+        now = datetime.now()
+        today = now.strftime("%Y%m%d_%H%M%S")
+
+        backup_file = f"{BACKUP_DIR}/conglenh_{today}.db"
+
+        shutil.copy(DB, backup_file)
+
+        size = os.path.getsize(backup_file) / (1024*1024)
+
+        log = f"[{now}] BACKUP OK: {backup_file} ({size:.2f} MB)"
+
+        with open("backup.log","a") as f:
+            f.write(log+"\n")
+
+        print(log)
+
+        # giữ 30 file gần nhất
+        files = sorted(os.listdir(BACKUP_DIR))
+
+        if len(files) > 30:
+
+            for f in files[:-30]:
+                os.remove(os.path.join(BACKUP_DIR, f))
+        
+    except Exception as e:
+
+        log = f"[{datetime.now()}] BACKUP ERROR: {e}"
+
+        with open("backup.log","a") as f:
+            f.write(log+"\n")
+
+        print(log)
+    subprocess.run(["python3", "backup_drive.py"])
+# ================= backup_now =================
+
+@app.route("/backup_now")
+def backup_now():
+
+    if session.get("role") != "admin":
+        return "Không có quyền!"
+
+    auto_backup()
+
+    return redirect("/backup_manager")
+
 # =========================
 # chống ngủ server
 # =========================
@@ -2844,6 +2979,20 @@ def keep_alive():
         time.sleep(300)
 
 threading.Thread(target=keep_alive, daemon=True).start()
+# ===== START SCHEDULER CHO RENDER =====
+scheduler = BackgroundScheduler()
+
+def start_scheduler():
+
+    scheduler.add_job(auto_backup, 'cron', hour=16, minute=0)
+    scheduler.add_job(backup_job, 'cron', hour=16, minute=10)
+
+    if not scheduler.running:
+        scheduler.start()
+        print("Auto backup scheduler started")
+
+start_scheduler()
+
 # =========================
 # CHẠY APP
 # =========================
