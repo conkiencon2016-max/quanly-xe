@@ -383,12 +383,12 @@ input[type="number"] {
             </select>
 
            
-<label>📅 Thời gian đi</label>
-<input type="datetime-local" name="start_time" required>
+<input type="datetime-local" class="start-time">
+<small class="hint">Nhập thời gian đi</small>
 
-<label>📅 Thời gian về</label>
-<input type="datetime-local" name="end_time" required>
-<input type="text" name="requester"
+<input type="datetime-local" class="end-time">
+<small class="hint">Nhập thời gian về</small>
+<input type="text" name="requester" rows="2"
        placeholder="Nhập tên người đi công tác (VD: Lê Văn A)" required>
 
 <textarea name="work_content" rows="2"
@@ -417,6 +417,30 @@ input[type="number"] {
 <div class="top-bar">
     <a href="/" class="btn-back">⬅ Quay về Trang chủ</a>
 </div>
+<!-- ===== SCRIPT ===== -->
+<script>
+document.addEventListener("DOMContentLoaded", () => {
 
+    document.querySelectorAll(".start-time").forEach((input) => {
+
+        const hint = input.parentElement.querySelector(".hint");
+
+        // chạy ngay khi load
+        if (input.value) {
+            hint.style.display = "none";
+        }
+
+        input.addEventListener("change", () => {
+            if (input.value) {
+                hint.style.display = "none";
+            } else {
+                hint.style.display = "block";
+            }
+        });
+
+    });
+
+});
+</script>
 </body>
 </html>
