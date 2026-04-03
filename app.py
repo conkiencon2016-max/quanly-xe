@@ -16,7 +16,7 @@ from io import BytesIO
 from collections import defaultdict
 import re
 import threading
-
+from apscheduler.schedulers.background import BackgroundScheduler
 # =========================
 # FORMAT DATETIME (GLOBAL)
 # =========================
@@ -2980,24 +2980,21 @@ def keep_alive():
         time.sleep(300)
 
 threading.Thread(target=keep_alive, daemon=True).start()
-# ===== START SCHEDULER CHO RENDER =====
+# ===== SCHEDULER =====
 scheduler = BackgroundScheduler()
 
 def start_scheduler():
 
+    if scheduler.running:
+        return   # tránh chạy lại
+
     scheduler.add_job(auto_backup, 'cron', hour=16, minute=0)
     scheduler.add_job(backup_job, 'cron', hour=16, minute=10)
 
-    if not scheduler.running:
-        scheduler.start()
-        print("Auto backup scheduler started")
+    scheduler.start()
+    print("✅ Auto backup scheduler started")
 
-start_scheduler()
 
-# =========================
-# CHẠY APP
-# =========================
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))
-
-    app.run(host="0.0.0.0", port=port, debug=False)
+# ===== START SCHEDULER CHO RENDER (QUAN TRỌNG) =====
+if os.environ.get("RENDER") == "true":
+    start_scheduler()
