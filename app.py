@@ -2810,20 +2810,6 @@ def xoa_user(id):
 
     return redirect("/quan-ly-user")
 
-# =========================
-# sao lưu dữ liệu
-# =========================
-@app.route("/backup")
-@login_required
-@admin_required
-def backup():
-
-    return send_file(
-        "fleet.db",
-        as_attachment=True,
-        download_name="fleet_backup.db"
-    )
-    # ================= backup =================
 # ================= BACKUP DATABASE =================
 def backup_job():
     try:
@@ -2857,9 +2843,8 @@ def restore_backup(filename):
 
     if not os.path.exists(backup_file):
         return "File backup không tồn tại!"
-    con = db()
-    con.close()
-    os.replace(backup_file, DB)
+
+    shutil.copy(backup_file, DB)
     return "Khôi phục database thành công! Hãy reload trang."
 # ================= backup_manager =================
 
@@ -2917,11 +2902,9 @@ def auto_backup():
         now = datetime.now()
         today = now.strftime("%Y%m%d_%H%M%S")
 
-        backup_file = f"{BACKUP_DIR}/quanlyxe_{today}.db"
-        con = db()
-        backup_path = backup_path.replace("'", "''")
-        con.execute(f"VACUUM INTO '{backup_path}'")
-        con.close()
+        backup_file = f"{BACKUP_DIR}/conglenh_{today}.db"
+
+        shutil.copy(DB, backup_file)
 
         size = os.path.getsize(backup_file) / (1024*1024)
 
@@ -2949,33 +2932,18 @@ def auto_backup():
 
         print(log)
     subprocess.run(["python3", "backup_drive.py"])
+# ================= backup_now =================
 
-# =========================
-# backup now
-# =========================
 @app.route("/backup_now")
-@login_required
-@admin_required
 def backup_now():
 
-    try:
-        con = db()
+    if session.get("role") != "admin":
+        return "Không có quyền!"
 
-        backup_dir = "backups"
-        os.makedirs(backup_dir, exist_ok=True)
+    auto_backup()
 
-        filename = f"fleet_{datetime.now().strftime('%Y%m%d_%H%M%S')}.db"
-        backup_path = os.path.join(backup_dir, filename)
+    return redirect("/backup_manager")
 
-        # ✅ BACKUP CHUẨN SQLITE (KHÔNG LOCK)
-        con.execute(f"VACUUM INTO '{backup_path}'")
-
-        con.close()
-
-        return redirect("/backup_manager")
-
-    except Exception as e:
-        return f"Lỗi backup: {str(e)}", 500
 
 
 @app.before_request
