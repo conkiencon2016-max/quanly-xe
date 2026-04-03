@@ -16,7 +16,7 @@ from io import BytesIO
 from collections import defaultdict
 import re
 import threading
-from apscheduler.schedulers.background import BackgroundScheduler
+
 DB = "fleet.db"
 # =========================
 # FORMAT DATETIME (GLOBAL)
@@ -158,6 +158,33 @@ def send_telegram(chat_id, message):
     except Exception as e:
         print("Telegram exception:", e)
 # =========================
+# telegram CHO TAI XE (ĐÃ TỐI ƯU HÓA)
+# =========================
+
+def send_telegram(chat_id, message):
+
+    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+
+    payload = {
+        "chat_id": chat_id,
+        "text": message,
+        "parse_mode": "HTML"
+    }
+
+    try:
+
+        r = requests.post(url, json=payload, timeout=10)
+
+        print("Telegram status:", r.status_code)
+        print("Telegram response:", r.text)
+
+        return r.status_code == 200
+
+    except Exception as e:
+
+        print("Telegram error:", e)
+        return "OK"
+# =========================
 # KẾT NỐI DATABASE
 # =========================
 def db():
@@ -275,33 +302,7 @@ def gui_zalo_cho_taixe(chat_id, noi_dung):
     except Exception as e:
         print("❌ Lỗi gửi Zalo:", e)
         return "OK"
-# =========================
-# telegram CHO TAI XE (ĐÃ TỐI ƯU HÓA)
-# =========================
 
-def send_telegram(chat_id, message):
-
-    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
-
-    payload = {
-        "chat_id": chat_id,
-        "text": message,
-        "parse_mode": "HTML"
-    }
-
-    try:
-
-        r = requests.post(url, json=payload, timeout=10)
-
-        print("Telegram status:", r.status_code)
-        print("Telegram response:", r.text)
-
-        return r.status_code == 200
-
-    except Exception as e:
-
-        print("Telegram error:", e)
-        return "OK"
 
 # =========================
 # ĐIỀU XE (WEB CON)
