@@ -387,16 +387,11 @@ input[type="number"] {
        required
        class="dt-input">
 
-<input type="datetime-local"
-       name="start_time"
-       required
-       class="dt1-input">
+<label>📅 Thời gian đi</label>
+<input type="datetime-local" name="start_time" required>
 
-<input type="text"
-       name="requester"
-       placeholder="Nhập người công tác (VD: lê văn a...)"
-       value="{{ yeu_cau.nguoi_yeu_cau if yeu_cau else '' }}"
-       required>
+<<label>📅 Thời gian về</label>
+<input type="datetime-local" name="end_time" required>
 
 <textarea name="work_content" rows="2"
     placeholder="Nhập nội dung công tác (VD: đi họp, kiểm tra...)"
