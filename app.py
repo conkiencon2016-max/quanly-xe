@@ -18,7 +18,6 @@ from collections import defaultdict
 import re
 import threading
 
-DB = "fleet.db"
 # =========================
 # FORMAT DATETIME (GLOBAL)
 # =========================
@@ -127,7 +126,7 @@ load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "change-this-secret")
-
+DB = "fleet.db"
 # Session timeout 15 phút
 app.permanent_session_lifetime = timedelta(minutes=15)
 
