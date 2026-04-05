@@ -2919,18 +2919,12 @@ def backup_now():
 
 # ===== START SCHEDULER CHO RENDER =====
 scheduler = BackgroundScheduler()
-
 def start_scheduler():
-
     scheduler.add_job(auto_backup, 'cron', hour=16, minute=0)
-    scheduler.add_job(backup_job, 'cron', hour=16, minute=10)
-
     if not scheduler.running:
         scheduler.start()
         print("Auto backup scheduler started")
-
 start_scheduler()
-
 
 if __name__ == "__main__":
 
