@@ -2962,7 +2962,9 @@ def auto_backup():
     subprocess.run(["python3", "backup_drive.py"])
 # ================= backup_now =================
 
-@app.route("/backup_now")
+@app.route("/backup_now", methods=["POST"])
+@login_required
+@admin_required
 def backup_now():
 
     if session.get("role") != "admin":
