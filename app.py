@@ -2882,7 +2882,7 @@ def backup_manager():
     if session.get("role") != "admin":
         return "Không có quyền!"
 
-    BACKUP_DIR = "/tmp/backups"
+    BACKUP_DIR = "backups"
     os.makedirs(BACKUP_DIR, exist_ok=True)
 
     files = sorted(os.listdir(BACKUP_DIR), reverse=True)
@@ -2923,14 +2923,12 @@ def backup_manager():
 def auto_backup():
 
     try:
+        
+        backup_dir = "/tmp/backups"
+        os.makedirs(backup_dir, exist_ok=True)
 
-        BACKUP_DIR = os.path.join(os.getcwd(), "backups")
-        os.makedirs(BACKUP_DIR, exist_ok=True)
-
-        now = datetime.now()
-        today = now.strftime("%Y%m%d_%H%M%S")
-
-        backup_file = f"{BACKUP_DIR}/conglenh_{today}.db"
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        backup_file = f"backups/fleet_{timestamp}.db"
 
         shutil.copy(DB, backup_file)
 
