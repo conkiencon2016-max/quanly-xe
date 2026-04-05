@@ -17,6 +17,7 @@ from io import BytesIO
 from collections import defaultdict
 import re
 import threading
+import shutil
 
 # =========================
 # FORMAT DATETIME (GLOBAL)
@@ -126,7 +127,7 @@ load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "change-this-secret")
-DB = "fleet.db"
+DB = os.path.abspath("fleet.db")
 # Session timeout 15 phút
 app.permanent_session_lifetime = timedelta(minutes=15)
 
