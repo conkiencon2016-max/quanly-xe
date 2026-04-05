@@ -2840,8 +2840,6 @@ threading.Thread(target=keep_alive, daemon=True).start()
 # ================= AUTO BACKUP DATABASE =================
 backup_lock = threading.Lock()
 def auto_backup():
-    def auto_backup():
-
     if backup_lock.locked():
         print("⚠️ Backup đang chạy, bỏ qua")
         return
