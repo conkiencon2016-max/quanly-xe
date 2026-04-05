@@ -2837,6 +2837,87 @@ def keep_alive():
         time.sleep(300)
 
 threading.Thread(target=keep_alive, daemon=True).start()
+# ================= AUTO BACKUP DATABASE =================
+def auto_backup():
+
+    try:
+
+        os.makedirs("backups", exist_ok=True)
+
+        today = datetime.now().strftime("%Y%m%d")
+
+        backup_file = f"backups/quanlyxe_{today}.db"
+
+        shutil.copy(DB, backup_file)
+
+        print("Backup OK:", backup_file)
+
+        # giữ 30 file gần nhất
+        files = sorted(os.listdir("backups"))
+
+        if len(files) > 30:
+
+            for f in files[:-30]:
+                os.remove(os.path.join("backups", f))
+
+    except Exception as e:
+
+        print("Backup error:", e)
+
+# ================= download_backup =================
+@app.route("/download_backup/<filename>")
+def download_backup(filename):
+
+    if session.get("role") != "admin":
+        return "Không có quyền!"
+
+    path = os.path.join("backups", filename)
+
+    if not os.path.exists(path):
+        return "File không tồn tại!"
+
+    return send_file(path, as_attachment=True)
+# ================= restore_backup =================
+@app.route("/restore_backup/<filename>")
+def restore_backup(filename):
+
+    if session.get("role") != "admin":
+        return "Không có quyền!"
+
+    backup_file = os.path.join("backups", filename)
+
+    if not os.path.exists(backup_file):
+        return "File backup không tồn tại!"
+
+    shutil.copy(backup_file, DB)
+
+    return "Khôi phục database thành công! Hãy reload trang."
+    # ================= backup_manager =================
+
+@app.route("/backup_manager")
+def backup_manager():
+
+    os.makedirs("backups", exist_ok=True)
+
+    files = sorted(os.listdir("backups"), reverse=True)
+
+    return render_template(
+        "backup_manager.html",
+        files=files
+    )
+# ================= backup_now =================
+
+@app.route("/backup_now")
+def backup_now():
+
+    if session.get("role") != "admin":
+        return "Không có quyền!"
+
+    auto_backup()
+
+    return redirect("/backup_manager")
+
+
 
 
 if __name__ == "__main__":
