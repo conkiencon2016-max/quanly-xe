@@ -2838,36 +2838,14 @@ def keep_alive():
         time.sleep(300)
 
 threading.Thread(target=keep_alive, daemon=True).start()
-# ================= AUTO BACKUP DATABASE =================
-backup_lock = threading.Lock()
-def auto_backup():
-    if backup_lock.locked():
-        print("⚠️ Backup đang chạy, bỏ qua")
-        return
+# ================= BACKUP DATABASE =================
+def backup_job():
+    try:
+        subprocess.run(["python3", "backup_drive.py"], check=True)
+        print("Backup Google Drive OK")
+    except Exception as e:
+        print("Backup Google Drive lỗi:", e)
 
-    with backup_lock:
-
-        try:
-            os.makedirs("backups", exist_ok=True)
-
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            backup_file = f"backups/quanlyxe_{timestamp}.db"
-
-            shutil.copy(DB, backup_file)
-
-            print("✅ Backup OK:", backup_file)
-
-        # giữ 30 file gần nhất
-            files = sorted(os.listdir("backups"))
-
-            if len(files) > 30:
-
-               for f in files[:-30]:
-                    os.remove(os.path.join("backups", f))
-
-        except Exception as e:
-
-            print("Backup error:", e)
 
 # ================= download_backup =================
 @app.route("/download_backup/<filename>")
@@ -2884,72 +2862,116 @@ def download_backup(filename):
     return send_file(path, as_attachment=True)
 # ================= restore_backup =================
 @app.route("/restore_backup/<filename>")
-@login_required
-@admin_required
 def restore_backup(filename):
+
+    if session.get("role") != "admin":
+        return "Không có quyền!"
 
     backup_file = os.path.join("backups", filename)
 
     if not os.path.exists(backup_file):
         return "File backup không tồn tại!"
 
-    # 🔥 đóng tất cả connection trước (QUAN TRỌNG)
-    con = db()
-    con.close()
-
-    time.sleep(1)
-
     shutil.copy(backup_file, DB)
-
-    return redirect("/backup_manager")
-
-
+    return "Khôi phục database thành công! Hãy reload trang."
 # ================= backup_manager =================
 
 @app.route("/backup_manager")
-@login_required
-@admin_required
 def backup_manager():
 
-    os.makedirs("backups", exist_ok=True)
+    if session.get("role") != "admin":
+        return "Không có quyền!"
 
-    raw_files = os.listdir("backups")
+    BACKUP_DIR = "backups"
+    os.makedirs(BACKUP_DIR, exist_ok=True)
 
-    files = []
+    files = sorted(os.listdir(BACKUP_DIR), reverse=True)
+
+    file_data = []
     total_size = 0
 
-    for f in raw_files:
-        path = os.path.join("backups", f)
-        size = os.path.getsize(path)
-        total_size += size
+    for f in files:
 
-        files.append({
-            "name": f,
-            "size": f"{round(size/1024,2)} KB"
-        })
+        path = os.path.join(BACKUP_DIR, f)
 
-    files.sort(reverse=True)
+        if os.path.isfile(path):
 
-    latest = files[0]["name"] if files else "Chưa có"
+            size = os.path.getsize(path)
+            total_size += size
+
+            file_data.append({
+                "name": f,
+                "size": f"{size / (1024*1024):.2f} MB",
+                "raw_size": size
+            })
+
+    # ===== FILE MỚI NHẤT =====
+    latest = file_data[0]["name"] if file_data else "Chưa có"
+
+    # ===== STATUS =====
+    status = "OK" if file_data else "NO DATA"
 
     return render_template(
         "backup_manager.html",
-        files=files,
-        total_files=len(files),
-        total_size=f"{round(total_size/1024/1024,2)} MB",
+        files=file_data,
+        total_files=len(file_data),
+        total_size=f"{total_size/(1024*1024):.2f} MB",
         latest=latest,
-        status="OK"
+        status=status
     )
+# ================= AUTO BACKUP DATABASE =================
+def auto_backup():
+
+    try:
+
+        BACKUP_DIR = os.path.join(os.getcwd(), "backups")
+        os.makedirs(BACKUP_DIR, exist_ok=True)
+
+        now = datetime.now()
+        today = now.strftime("%Y%m%d_%H%M%S")
+
+        backup_file = f"{BACKUP_DIR}/conglenh_{today}.db"
+
+        shutil.copy(DB, backup_file)
+
+        size = os.path.getsize(backup_file) / (1024*1024)
+
+        log = f"[{now}] BACKUP OK: {backup_file} ({size:.2f} MB)"
+
+        with open("backup.log","a") as f:
+            f.write(log+"\n")
+
+        print(log)
+
+        # giữ 30 file gần nhất
+        files = sorted(os.listdir(BACKUP_DIR))
+
+        if len(files) > 30:
+
+            for f in files[:-30]:
+                os.remove(os.path.join(BACKUP_DIR, f))
+        
+    except Exception as e:
+
+        log = f"[{datetime.now()}] BACKUP ERROR: {e}"
+
+        with open("backup.log","a") as f:
+            f.write(log+"\n")
+
+        print(log)
+    subprocess.run(["python3", "backup_drive.py"])
 # ================= backup_now =================
 
-@app.route("/backup_now", methods=["POST"])
-@login_required
-@admin_required
+@app.route("/backup_now")
 def backup_now():
+
+    if session.get("role") != "admin":
+        return "Không có quyền!"
 
     auto_backup()
 
     return redirect("/backup_manager")
+
 
 # ===== START SCHEDULER CHO RENDER =====
 scheduler = BackgroundScheduler()
@@ -2958,7 +2980,7 @@ def start_scheduler():
     if not scheduler.running:
         scheduler.start()
         print("Auto backup scheduler started")
-    start_scheduler()
+start_scheduler()
 
 
 if __name__ == "__main__":
