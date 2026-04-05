@@ -2844,9 +2844,8 @@ def auto_backup():
 
         os.makedirs("backups", exist_ok=True)
 
-        today = datetime.now().strftime("%Y%m%d")
-
-        backup_file = f"backups/quanlyxe_{today}.db"
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        backup_file = f"backups/quanlyxe_{timestamp}.db"
 
         shutil.copy(DB, backup_file)
 
@@ -2879,31 +2878,61 @@ def download_backup(filename):
     return send_file(path, as_attachment=True)
 # ================= restore_backup =================
 @app.route("/restore_backup/<filename>")
+@login_required
+@admin_required
 def restore_backup(filename):
-
-    if session.get("role") != "admin":
-        return "Không có quyền!"
 
     backup_file = os.path.join("backups", filename)
 
     if not os.path.exists(backup_file):
         return "File backup không tồn tại!"
 
+    # 🔥 đóng tất cả connection trước (QUAN TRỌNG)
+    con = db()
+    con.close()
+
+    time.sleep(1)
+
     shutil.copy(backup_file, DB)
 
-    return "Khôi phục database thành công! Hãy reload trang."
-    # ================= backup_manager =================
+    return redirect("/backup_manager")
+
+
+# ================= backup_manager =================
 
 @app.route("/backup_manager")
+@login_required
+@admin_required
 def backup_manager():
 
     os.makedirs("backups", exist_ok=True)
 
-    files = sorted(os.listdir("backups"), reverse=True)
+    raw_files = os.listdir("backups")
+
+    files = []
+    total_size = 0
+
+    for f in raw_files:
+        path = os.path.join("backups", f)
+        size = os.path.getsize(path)
+        total_size += size
+
+        files.append({
+            "name": f,
+            "size": f"{round(size/1024,2)} KB"
+        })
+
+    files.sort(reverse=True)
+
+    latest = files[0]["name"] if files else "Chưa có"
 
     return render_template(
         "backup_manager.html",
-        files=files
+        files=files,
+        total_files=len(files),
+        total_size=f"{round(total_size/1024/1024,2)} MB",
+        latest=latest,
+        status="OK"
     )
 # ================= backup_now =================
 
@@ -2924,7 +2953,8 @@ def start_scheduler():
     if not scheduler.running:
         scheduler.start()
         print("Auto backup scheduler started")
-start_scheduler()
+    start_scheduler()
+
 
 if __name__ == "__main__":
 
