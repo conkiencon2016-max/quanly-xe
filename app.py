@@ -2882,7 +2882,7 @@ def backup_manager():
     if session.get("role") != "admin":
         return "Không có quyền!"
 
-    BACKUP_DIR = "backups"
+    BACKUP_DIR = "/tmp/backups"
     os.makedirs(BACKUP_DIR, exist_ok=True)
 
     files = sorted(os.listdir(BACKUP_DIR), reverse=True)
