@@ -4,4 +4,8 @@ requests
 python-dotenv
 pyTelegramBotAPI
 openpyxl
+google-api-python-client
+google-auth
+google-auth-httplib2
+google-auth-oauthlib
 apscheduler
