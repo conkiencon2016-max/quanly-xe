@@ -2928,7 +2928,7 @@ def auto_backup():
         os.makedirs(backup_dir, exist_ok=True)
 
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        backup_file = f"backups/fleet_{timestamp}.db"
+        backup_file = f"{backup_dir}/fleet_{timestamp}.db"
 
         shutil.copy(DB, backup_file)
 
@@ -2965,10 +2965,19 @@ def auto_backup():
 @admin_required
 def backup_now():
 
-    if session.get("role") != "admin":
-        return "Không có quyền!"
+    try:
+        os.makedirs("backups", exist_ok=True)
 
-    auto_backup()
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        backup_file = f"backups/fleet_{timestamp}.db"
+
+        shutil.copy(DB, backup_file)
+
+        print("✅ Backup OK:", backup_file)
+
+    except Exception as e:
+        print("❌ Backup error:", e)
+        return f"Lỗi backup: {str(e)}", 500
 
     return redirect("/backup_manager")
 
