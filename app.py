@@ -2840,33 +2840,35 @@ threading.Thread(target=keep_alive, daemon=True).start()
 # ================= AUTO BACKUP DATABASE =================
 backup_lock = threading.Lock()
 def auto_backup():
+    def auto_backup():
+
     if backup_lock.locked():
         print("⚠️ Backup đang chạy, bỏ qua")
         return
 
     with backup_lock:
-    try:
 
-        os.makedirs("backups", exist_ok=True)
+        try:
+            os.makedirs("backups", exist_ok=True)
 
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        backup_file = f"backups/quanlyxe_{timestamp}.db"
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            backup_file = f"backups/quanlyxe_{timestamp}.db"
 
-        shutil.copy(DB, backup_file)
+            shutil.copy(DB, backup_file)
 
-        print("Backup OK:", backup_file)
+            print("✅ Backup OK:", backup_file)
 
         # giữ 30 file gần nhất
         files = sorted(os.listdir("backups"))
 
-        if len(files) > 30:
+            if len(files) > 30:
 
-            for f in files[:-30]:
-                os.remove(os.path.join("backups", f))
+               for f in files[:-30]:
+                    os.remove(os.path.join("backups", f))
 
-    except Exception as e:
+        except Exception as e:
 
-        print("Backup error:", e)
+            print("Backup error:", e)
 
 # ================= download_backup =================
 @app.route("/download_backup/<filename>")
