@@ -2838,8 +2838,13 @@ def keep_alive():
 
 threading.Thread(target=keep_alive, daemon=True).start()
 # ================= AUTO BACKUP DATABASE =================
+backup_lock = threading.Lock()
 def auto_backup():
+    if backup_lock.locked():
+        print("⚠️ Backup đang chạy, bỏ qua")
+        return
 
+    with backup_lock:
     try:
 
         os.makedirs("backups", exist_ok=True)
