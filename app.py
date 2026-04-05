@@ -2936,11 +2936,10 @@ def backup_manager():
     )
 # ================= backup_now =================
 
-@app.route("/backup_now")
+@app.route("/backup_now", methods=["POST"])
+@login_required
+@admin_required
 def backup_now():
-
-    if session.get("role") != "admin":
-        return "Không có quyền!"
 
     auto_backup()
 
