@@ -2857,7 +2857,7 @@ def auto_backup():
             print("✅ Backup OK:", backup_file)
 
         # giữ 30 file gần nhất
-        files = sorted(os.listdir("backups"))
+            files = sorted(os.listdir("backups"))
 
             if len(files) > 30:
 
