@@ -138,26 +138,7 @@ app.config.update(
 )
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 ZALO_BOT_TOKEN = os.getenv("ZALO_BOT_TOKEN")
-# =========================
-# TELEGRAM SERVICE
-# =========================
-def send_telegram(chat_id, message):
-    if not TELEGRAM_TOKEN or not chat_id:
-        return
 
-    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
-
-    try:
-        res = requests.post(url, json={
-            "chat_id": chat_id,
-            "text": message
-        }, timeout=5)
-
-        if res.status_code != 200:
-            print("Telegram lỗi:", res.text)
-
-    except Exception as e:
-        print("Telegram exception:", e)
 # =========================
 # telegram CHO TAI XE (ĐÃ TỐI ƯU HÓA)
 # =========================
