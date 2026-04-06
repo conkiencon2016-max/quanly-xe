@@ -396,7 +396,9 @@ input[type="number"] {
     required>
 </textarea>
 
-            <button class="start" type="submit">Điều xe</button>
+            <button class="start" type="submit" onclick="this.disabled=true;this.form.submit();">
+    Điều xe
+</button>
         </form>
         {% else %}
         <form method="post" action="/stop/{{ v[0] }}" id="stop-form-{{ v[0] }}">
