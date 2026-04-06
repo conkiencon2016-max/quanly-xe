@@ -2238,8 +2238,9 @@ def telegram_webhook():
         # KIỂM TRA ADMIN
         # =========================
         admin = con.execute("""
-            SELECT id FROM bot_admins WHERE telegram_id=?
-        """, (chat_id,)).fetchone()
+            SELECT id FROM users 
+            WHERE telegram_chat_id = ? AND role = 'admin'
+        """, (str(chat_id),)).fetchone()
 
         is_admin = True if admin else False
 
