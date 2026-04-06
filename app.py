@@ -2393,6 +2393,150 @@ def telegram_webhook():
             send_telegram(chat_id, msg)
             con.close()
             return "OK"
+         # =================================
+        # TÀI XẾ XÁC NHẬN LỆNH
+        # =================================
+
+        if text == "nhan":
+
+            driver = con.execute("""
+                SELECT id, name
+                FROM drivers
+                WHERE telegram_chat_id=?
+            """,(chat_id,)).fetchone()
+
+            if not driver:
+
+                send_telegram(chat_id,"❌ Bạn chưa liên kết Telegram")
+                con.close()
+                return "OK"
+
+            trip = con.execute("""
+                SELECT id
+                FROM vehicles
+                WHERE driver_id=? AND status=1
+            """,(driver["id"],)).fetchone()
+
+            if not trip:
+
+                send_telegram(chat_id,"⚠️ Không có lệnh điều xe")
+                con.close()
+                return "OK"
+
+            con.execute("""
+                UPDATE vehicles
+                SET driver_confirm=1
+                WHERE id=?
+            """,(trip["id"],))
+
+            con.commit()
+
+            
+            # thông báo cho tài xế
+            send_telegram(
+                chat_id,
+                f"✅ {driver['name']} đã xác nhận nhận lệnh điều xe.\n🚗 Xe: {trip['plate']}"
+            )
+
+            print(f"Tài xế {driver['name']} đã xác nhận lệnh xe {trip['plate']}")
+            con.close()
+            return "OK"
+
+
+
+        # =================================
+        # TÀI XẾ HOÀN THÀNH CHUYẾN
+        # =================================
+
+        if text.startswith("xong"):
+
+            parts = text.split(" ")
+
+            if len(parts) < 2:
+
+                send_telegram(chat_id,"⚠️ Cú pháp: xong 35")
+                con.close()
+                return "OK"
+
+            km = int(parts[1])
+
+            driver = con.execute("""
+                SELECT id,name
+                FROM drivers
+                WHERE telegram_chat_id=?
+            """,(chat_id,)).fetchone()
+
+            if not driver:
+
+                send_telegram(chat_id,"❌ Bạn chưa liên kết Telegram")
+                con.close()
+                return "OK"
+
+            trip = con.execute("""
+                SELECT *
+                FROM vehicles
+                WHERE driver_id=? AND status=1
+            """,(driver["id"],)).fetchone()
+
+            if not trip:
+
+                send_telegram(chat_id,"⚠️ Không có chuyến xe đang chạy")
+                con.close()
+                return "OK"
+
+            msg_time = message.get("date")
+
+            end_time = datetime.fromtimestamp(msg_time).isoformat()
+
+            start_dt = datetime.fromisoformat(trip["start_time"])
+            end_dt = datetime.fromtimestamp(msg_time)
+
+            duration_minutes = int((end_dt-start_dt).total_seconds()/60)
+
+            con.execute("""
+                INSERT INTO trip_history
+                (vehicle_id,plate,driver_name,
+                 start_time,end_time,
+                 duration_minutes,work_content,km_travel)
+                VALUES (?,?,?,?,?,?,?,?)
+            """,(
+                trip["id"],
+                trip["plate"],
+                driver["name"],
+                trip["start_time"],
+                end_time,
+                duration_minutes,
+                trip["work_content"],
+                km
+            ))
+
+            new_km = (trip["km"] or 0) + km
+
+            con.execute("""
+                UPDATE vehicles
+                SET km=?,
+                    status=0,
+                    driver_id=NULL,
+                    start_time=NULL,
+                    end_time=NULL,
+                    work_content=NULL
+                WHERE id=?
+            """,(new_km,trip["id"]))
+
+            con.commit()
+
+            send_telegram(
+                chat_id,
+                f"""✅ ĐÃ HOÀN THÀNH CHUYẾN
+
+🚗 Xe: {trip['plate']}
+🛣 KM: {km} km
+⏱ Thời gian chạy: {duration_minutes} phút
+"""
+            )
+
+            con.close()
+            return "OK"
 
         # =========================
         # KHÔNG NHẬN DIỆN
