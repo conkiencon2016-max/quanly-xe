@@ -123,7 +123,7 @@ body{
 {% for r in top_xe %}
 <tr>
 <td>{{ r.plate }}</td>
-<td>{{ "{:,.0f}".format(r.tong_km) }}</td>
+<td>{{ "{:,.0f}".format(r.tong_km or 0) }}</td>
 </tr>
 {% endfor %}
 
