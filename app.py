@@ -2665,60 +2665,96 @@ def yeu_cau_dieu_xe():
         cho=cho,
         da=da
     )
+
+# ========================= 
+# danh sách yêu cầu 
 # =========================
-# danh sách yêu cầu
-# =========================
+
 @app.route("/danh-sach-yeu-cau")
 @login_required
 def danh_sach_yeu_cau():
 
     con = db()
+    today = date.today()
 
     status = request.args.get("status")
     search_name = request.args.get("search_name", "").strip()
     tu_ngay = request.args.get("tu_ngay")
     den_ngay = request.args.get("den_ngay")
+    sap_den_han_filter = request.args.get("sap_den_han")
+
+    # =========================
+    # QUERY DATA
+    # =========================
     sql = "SELECT * FROM yeu_cau_xe WHERE 1=1"
     params = []
+
     if status == "cho_duyet":
         sql += " AND trang_thai='cho_duyet'"
     elif status == "da_duyet":
         sql += " AND trang_thai='da_duyet'"
-    # lọc theo tên
-    if search_name:
-         sql += " AND nguoi_yeu_cau LIKE ?"
-         params.append(f"%{search_name}%")
 
-    # lọc từ ngày
+    if search_name:
+        sql += " AND nguoi_yeu_cau LIKE ?"
+        params.append(f"%{search_name}%")
+
     if tu_ngay:
         sql += " AND date(substr(ngay_di,1,10)) >= date(?)"
         params.append(tu_ngay)
 
-    # lọc đến ngày
     if den_ngay:
         sql += " AND date(substr(ngay_di,1,10)) <= date(?)"
         params.append(den_ngay)
+
     sql += " ORDER BY id DESC"
 
     data_raw = con.execute(sql, params).fetchall()
 
+    # =========================
+    # XỬ LÝ DATA + HẠN
+    # =========================
     data = []
+    sap_den_han = 0
+
     for r in data_raw:
         r = dict(r)
 
+        # format ngày
         r["ngay_di_dep"] = format_date(r.get("ngay_di"))
         r["ngay_ve_dep"] = format_date(r.get("ngay_ve"))
 
+        # tính hạn xử lý
+        han = None
+        if r.get("ngay_di"):
+            try:
+                ngay_di = datetime.fromisoformat(r["ngay_di"]).date()
+                han = (ngay_di - today).days
+            except:
+                han = None
+
+        r["han_xu_ly"] = han
+
+        # đếm dashboard
+        if han is not None and han <= 2:
+            sap_den_han += 1
+
         data.append(r)
 
-    # 👉 lấy xe rảnh
+    # =========================
+    # FILTER SẮP ĐẾN HẠN
+    # =========================
+    if sap_den_han_filter:
+        data = [r for r in data if r["han_xu_ly"] is not None and r["han_xu_ly"] <= 2]
+
+    # =========================
+    # XE + TÀI XẾ
+    # =========================
     vehicles = con.execute("""
         SELECT id, plate
         FROM vehicles
         WHERE status = 0
     """).fetchall()
 
-    # 👉 tài xế rảnh
     drivers = con.execute("""
         SELECT id, name
         FROM drivers
@@ -2727,16 +2763,22 @@ def danh_sach_yeu_cau():
             WHERE status=1 AND driver_id IS NOT NULL
         )
     """).fetchall()
+
+    # =========================
+    # DASHBOARD
+    # =========================
     tong = con.execute("SELECT COUNT(*) FROM yeu_cau_xe").fetchone()[0]
+
     cho = con.execute("""
-    SELECT COUNT(*) FROM yeu_cau_xe 
-    WHERE trang_thai='cho_duyet'
+        SELECT COUNT(*) FROM yeu_cau_xe 
+        WHERE trang_thai='cho_duyet'
     """).fetchone()[0]
 
     da = con.execute("""
-    SELECT COUNT(*) FROM yeu_cau_xe 
-    WHERE trang_thai='da_duyet'
+        SELECT COUNT(*) FROM yeu_cau_xe 
+        WHERE trang_thai='da_duyet'
     """).fetchone()[0]
+
     con.close()
 
     return render_template(
@@ -2747,11 +2789,11 @@ def danh_sach_yeu_cau():
         tong=tong,
         cho=cho,
         da=da,
+        sap_den_han=sap_den_han,
         search_name=search_name,
         tu_ngay=tu_ngay,
         den_ngay=den_ngay
     )
-
 # =========================
 # xử lý yêu cầu
 # =========================
