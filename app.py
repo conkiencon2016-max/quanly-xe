@@ -2978,109 +2978,77 @@ def xoa_yeu_cau(id):
  # =========================
 @app.route("/dashboard")
 @login_required
-def dashboard():
+def dashboard_data():
 
-    con = db()
+    try:
+        con = db()
 
-    # =========================
-    # TỔNG QUAN XE
-    # =========================
-    tong_xe = con.execute("SELECT COUNT(*) FROM vehicles").fetchone()[0]
+        # ===== XE =====
+        tong_xe = con.execute("SELECT COUNT(*) FROM vehicles").fetchone()[0] or 0
+        xe_dang_chay = con.execute("SELECT COUNT(*) FROM vehicles WHERE status=1").fetchone()[0] or 0
+        xe_ranh = con.execute("SELECT COUNT(*) FROM vehicles WHERE status=0").fetchone()[0] or 0
 
-    xe_dang_chay = con.execute("""
-        SELECT COUNT(*) FROM vehicles WHERE status=1
-    """).fetchone()[0]
+        # ===== TÀI XẾ =====
+        tong_taixe = con.execute("SELECT COUNT(*) FROM drivers").fetchone()[0] or 0
 
-    xe_ranh = con.execute("""
-        SELECT COUNT(*) FROM vehicles WHERE status=0
-    """).fetchone()[0]
+        taixe_ranh = con.execute("""
+            SELECT COUNT(*) FROM drivers
+            WHERE id NOT IN (
+                SELECT driver_id FROM vehicles
+                WHERE status=1 AND driver_id IS NOT NULL
+            )
+        """).fetchone()[0] or 0
 
-    # =========================
-    # TÀI XẾ
-    # =========================
-    tong_taixe = con.execute("SELECT COUNT(*) FROM drivers").fetchone()[0]
+        # ===== HÔM NAY =====
+        chuyen_hom_nay = con.execute("""
+            SELECT COUNT(*) FROM trip_history
+            WHERE start_time IS NOT NULL
+            AND DATE(start_time)=DATE('now')
+        """).fetchone()[0] or 0
 
-    taixe_ranh = con.execute("""
-        SELECT COUNT(*) FROM drivers
-        WHERE id NOT IN (
-            SELECT driver_id FROM vehicles
-            WHERE status=1 AND driver_id IS NOT NULL
-        )
-    """).fetchone()[0]
+        km_hom_nay = con.execute("""
+            SELECT SUM(km_travel) FROM trip_history
+            WHERE start_time IS NOT NULL
+            AND DATE(start_time)=DATE('now')
+        """).fetchone()[0] or 0
 
-    # =========================
-    # CHUYẾN XE HÔM NAY
-    # =========================
-    hom_nay = date.today().isoformat()
+        # ===== BIỂU ĐỒ =====
+        rows = con.execute("""
+            SELECT strftime('%Y-%m', start_time) as thang,
+                   SUM(km_travel) as km
+            FROM trip_history
+            WHERE start_time IS NOT NULL
+            GROUP BY thang
+            ORDER BY thang
+        """).fetchall()
 
-    chuyen_hom_nay = con.execute("""
-        SELECT COUNT(*) FROM trip_history
-        WHERE DATE(start_time)=DATE('now')
-    """).fetchone()[0]
+        labels = []
+        data_km = []
 
-    km_hom_nay = con.execute("""
-        SELECT SUM(km_travel) FROM trip_history
-        WHERE DATE(start_time)=DATE('now')
-    """).fetchone()[0] or 0
+        for r in rows:
+            if r["thang"]:
+                labels.append(r["thang"])
+                data_km.append(r["km"] or 0)
 
-    # =========================
-    # CẢNH BÁO
-    # =========================
-    canh_bao_dk = con.execute("""
-        SELECT COUNT(*) FROM vehicles
-        WHERE ngay_het_han_dang_kiem IS NOT NULL
-        AND DATE(ngay_het_han_dang_kiem) < DATE('now')
-    """).fetchone()[0]
+        con.close()
 
-    canh_bao_bd = con.execute("""
-        SELECT COUNT(*) FROM vehicles
-        WHERE (km - IFNULL(last_maintenance_km,0))
-        >= IFNULL(maintenance_cycle,5000)
-    """).fetchone()[0]
+        return jsonify({
+            "ok": True,
+            "data": {
+                "tong_xe": tong_xe,
+                "xe_dang_chay": xe_dang_chay,
+                "xe_ranh": xe_ranh,
+                "tong_taixe": tong_taixe,
+                "taixe_ranh": taixe_ranh,
+                "chuyen_hom_nay": chuyen_hom_nay,
+                "km_hom_nay": km_hom_nay,
+                "labels": labels,
+                "data_km": data_km
+            }
+        })
 
-    # =========================
-    # TOP XE CHẠY NHIỀU
-    # =========================
-    top_xe = con.execute("""
-        SELECT plate, SUM(km_travel) as tong_km
-        FROM trip_history
-        GROUP BY plate
-        ORDER BY tong_km DESC
-        LIMIT 5
-    """).fetchall()
-
-    # =========================
-    # BIỂU ĐỒ THÁNG
-    # =========================
-    rows = con.execute("""
-        SELECT 
-            strftime('%Y-%m', start_time) as thang,
-            SUM(km_travel) as km
-        FROM trip_history
-        GROUP BY thang
-        ORDER BY thang
-    """).fetchall()
-
-    labels = [r["thang"] for r in rows]
-    data_km = [r["km"] for r in rows]
-
-    con.close()
-
-    return render_template(
-        "dashboard.html",
-        tong_xe=tong_xe,
-        xe_dang_chay=xe_dang_chay,
-        xe_ranh=xe_ranh,
-        tong_taixe=tong_taixe,
-        taixe_ranh=taixe_ranh,
-        chuyen_hom_nay=chuyen_hom_nay,
-        km_hom_nay=km_hom_nay,
-        canh_bao_dk=canh_bao_dk,
-        canh_bao_bd=canh_bao_bd,
-        top_xe=top_xe,
-        labels=labels,
-        data_km=data_km
-    )
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)})
 
 # ================= XÓA USER =================
 
