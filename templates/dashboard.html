@@ -136,10 +136,10 @@ body{
 new Chart(document.getElementById('chart'), {
     type: 'bar',
     data: {
-        labels: {{ labels|tojson }},
+        labels = labels or [],
         datasets: [{
             label: 'KM',
-            data: {{ data_km|tojson }}
+            labels = labels or []
         }]
     }
 });
@@ -191,18 +191,7 @@ async function loadData(){
 setInterval(loadData, 5000);
 loadData();
 </script>
-    <script>
-chart = new Chart(document.getElementById('chart'), {
-    type: 'bar',
-    data: {
-        labels: {{ labels|tojson }},
-        datasets: [{
-            label: 'KM',
-            data: {{ data_km|tojson }}
-        }]
-    }
-});
-</script>
+
     <script>
 function highlight(){
 
