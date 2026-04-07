@@ -2,162 +2,158 @@
 <html lang="vi">
 <head>
 <meta charset="utf-8">
-<title>Thống kê điều xe</title>
+<title>Dashboard hệ thống xe</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<link rel="stylesheet" href="/static/style.css"></head>
-
-<body>
-<div class="overlay">
-
-<a href="/" class="back-link">⬅ Trang chủ</a>
-
-<div class="header">
-    <h1>THỐNG KÊ ĐIỀU XE</h1>
-</div>
-
-<form method="get">
-<div class="card">
-<h3>Bộ lọc tìm kiếm</h3>
-
-<div class="filter-bar">
-    <div class="filter-group">
-        <label>Từ ngày</label>
-        <input type="date" name="tu_ngay" value="{{ tu_ngay }}">
-    </div>
-
-    <div class="filter-group">
-        <label>Đến ngày</label>
-        <input type="date" name="den_ngay" value="{{ den_ngay }}">
-    </div>
-
-    <div class="filter-group">
-        <label>Xe</label>
-        <select name="xe">
-            <option value="">-- Tất cả --</option>
-            {% for x in danh_sach_xe %}
-            <option value="{{ x.plate }}" {% if x.plate==xe %}selected{% endif %}>
-                {{ x.plate }}
-            </option>
-            {% endfor %}
-        </select>
-    </div>
-
-    <div class="filter-group">
-        <label>Tài xế</label>
-        <select name="taixe">
-            <option value="">-- Tất cả --</option>
-            {% for t in danh_sach_taixe %}
-            <option value="{{ t.driver_name }}" {% if t.driver_name==taixe %}selected{% endif %}>
-                {{ t.driver_name }}
-            </option>
-            {% endfor %}
-        </select>
-    </div>
-
-    <button class="filter-btn" type="submit">🔍 Xem</button>
-    <button type="submit"
-        name="export"
-        value="excel"
-        class="excel-btn">
-    📥 Xuất Excel
-</button>
-</div>
-
-</div>
-</form>
-
-<div class="card">
-<h3>Kết quả</h3>
-{% if not co_dieu_kien %}
-<p style="color:#475569">Vui lòng chọn ít nhất một điều kiện để xem thống kê.</p>
-
-{% elif ket_qua %}
-<div class="dashboard">
-
-    <div class="dash-box dash-total">
-        <div class="dash-title">Tổng số chuyến</div>
-        <div class="dash-number">{{ tong_chuyen }}</div>
-    </div>
-
-    <div class="dash-box dash-active">
-        <div class="dash-title">Tổng KM</div>
-        <div class="dash-number">{{ "{:,.0f}".format(tong_km) }}</div>
-    </div>
-
-    <div class="dash-box dash-home">
-        <div class="dash-title">Tổng giờ chạy</div>
-        <div class="dash-number">{{ tong_gio }}</div>
-    </div>
-
-</div>
-<table>
-
-<tr>
-    <th>Xe</th>
-    <th>Tài xế</th>
-    <th>Nội dung công tác</th>
-    <th>Giờ đi</th>
-    <th>Giờ về</th>
-    <th>KM</th>
-    <th>Thời gian (phút)</th>
-</tr>
-{% for r in ket_qua %}
-<tr>
-    <td>{{ r.plate }}</td>
-    <td>{{ r.driver_name }}</td>
-    <td>{{ r.work_content }}</td>
-    <td>{{ r.start_time[:16].replace("T"," ") }}</td>
-    <td>{{ r.end_time[:16].replace("T"," ") }}</td>
-    <td>{{ r.km_travel or 0 }}</td>
-    <td>{{ r.duration_minutes or 0 }}</td>
-</tr>
-{% endfor %}
-</table>
-{% else %}
-<p>Không có dữ liệu phù hợp.</p>
-{% endif %}
-</div>
-
-</div>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-{% if ket_qua %}
+<style>
+body{
+    margin:0;
+    font-family:Segoe UI;
+    background:#0f172a;
+    color:#fff;
+}
+
+.container{
+    padding:20px;
+}
+
+.grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+    gap:15px;
+}
+
+.card{
+    background:#1e293b;
+    padding:16px;
+    border-radius:12px;
+}
+
+.title{
+    font-size:13px;
+    color:#94a3b8;
+}
+
+.number{
+    font-size:28px;
+    font-weight:bold;
+    margin-top:5px;
+}
+
+.red{color:#ef4444}
+.green{color:#22c55e}
+.yellow{color:#f59e0b}
+
+.table{
+    width:100%;
+    margin-top:20px;
+    border-collapse:collapse;
+}
+
+.table th, .table td{
+    padding:10px;
+    border-bottom:1px solid #334155;
+}
+
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<h2>🚗 DASHBOARD HỆ THỐNG</h2>
+
+<div class="grid">
+
 <div class="card">
-    <h3>Biểu đồ theo tháng</h3>
-    <canvas id="chart"></canvas>
+<div class="title">Tổng xe</div>
+<div class="number">{{ tong_xe }}</div>
+</div>
+
+<div class="card">
+<div class="title">Xe đang chạy</div>
+<div class="number yellow">{{ xe_dang_chay }}</div>
+</div>
+
+<div class="card">
+<div class="title">Xe rảnh</div>
+<div class="number green">{{ xe_ranh }}</div>
+</div>
+
+<div class="card">
+<div class="title">Tài xế</div>
+<div class="number">{{ tong_taixe }}</div>
+</div>
+
+<div class="card">
+<div class="title">Tài xế rảnh</div>
+<div class="number green">{{ taixe_ranh }}</div>
+</div>
+
+<div class="card">
+<div class="title">Chuyến hôm nay</div>
+<div class="number">{{ chuyen_hom_nay }}</div>
+</div>
+
+<div class="card">
+<div class="title">KM hôm nay</div>
+<div class="number">{{ "{:,.0f}".format(km_hom_nay) }}</div>
+</div>
+
+<div class="card">
+<div class="title">Cảnh báo đăng kiểm</div>
+<div class="number red">{{ canh_bao_dk }}</div>
+</div>
+
+<div class="card">
+<div class="title">Cảnh báo bảo dưỡng</div>
+<div class="number red">{{ canh_bao_bd }}</div>
+</div>
+
+</div>
+
+<!-- BIỂU ĐỒ -->
+<div class="card">
+<h3>📊 KM theo tháng</h3>
+<canvas id="chart"></canvas>
+</div>
+
+<!-- TOP XE -->
+<div class="card">
+<h3>🚗 Top xe chạy nhiều</h3>
+
+<table class="table">
+<tr>
+<th>Xe</th>
+<th>Tổng KM</th>
+</tr>
+
+{% for r in top_xe %}
+<tr>
+<td>{{ r.plate }}</td>
+<td>{{ "{:,.0f}".format(r.tong_km) }}</td>
+</tr>
+{% endfor %}
+
+</table>
+</div>
+
 </div>
 
 <script>
-const ctx = document.getElementById('chart');
-
-new Chart(ctx, {
+new Chart(document.getElementById('chart'), {
     type: 'bar',
     data: {
-        labels: {{ thang_labels | tojson }},
-        datasets: [
-            {
-                label: 'Tổng KM',
-                data: {{ data_km | tojson }},
-                borderWidth: 1
-            },
-            {
-                label: 'Số chuyến',
-                data: {{ data_chuyen | tojson }},
-                borderWidth: 1
-            }
-        ]
-    },
-    options: {
-        responsive: true,
-        plugins: {
-            legend: {
-                position: 'top',
-            }
-        }
+        labels: {{ labels|tojson }},
+        datasets: [{
+            label: 'KM',
+            data: {{ data_km|tojson }}
+        }]
     }
 });
 </script>
-{% endif %}
+
 </body>
 </html>
