@@ -2978,7 +2978,7 @@ def xoa_yeu_cau(id):
  # =========================
 @app.route("/dashboard")
 @login_required
-def dashboard_data():
+def dashboard():
 
     try:
         con = db()
