@@ -2732,10 +2732,14 @@ def danh_sach_yeu_cau():
             except:
                 han = None
 
-        r["han_xu_ly"] = han
-
+       
+        # CHỈ HIỂN THỊ HẠN KHI CHƯA DUYỆT
+        if r["trang_thai"] == "cho_duyet":
+            r["han_xu_ly"] = han
+        else:
+            r["han_xu_ly"] = None
         # đếm dashboard
-        if han is not None and han <= 2:
+        if r["trang_thai"] == "cho_duyet" and han is not None and han <= 2:
             sap_den_han += 1
 
         data.append(r)
@@ -2744,7 +2748,12 @@ def danh_sach_yeu_cau():
     # FILTER SẮP ĐẾN HẠN
     # =========================
     if sap_den_han_filter:
-        data = [r for r in data if r["han_xu_ly"] is not None and r["han_xu_ly"] <= 2]
+        data = [
+            r for r in data
+            if r["trang_thai"] == "cho_duyet"
+            and r["han_xu_ly"] is not None
+            and r["han_xu_ly"] <= 2
+        ]
 
     # =========================
     # XE + TÀI XẾ
