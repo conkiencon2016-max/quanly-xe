@@ -3045,9 +3045,10 @@ def dashboard():
         labels=labels,
         data_km=data_km
     )
+# ================= dashboard-data =================    
 @app.route("/dashboard-data")
 @login_required
-def dashboard_data():
+def dashboard_data_v2():
     try:
         con = db()
 
