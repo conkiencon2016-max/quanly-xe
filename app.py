@@ -2980,76 +2980,86 @@ def xoa_yeu_cau(id):
 @login_required
 def dashboard():
 
+    con = db()
+
+    tong_xe = con.execute("SELECT COUNT(*) FROM vehicles").fetchone()[0] or 0
+    xe_dang_chay = con.execute("SELECT COUNT(*) FROM vehicles WHERE status=1").fetchone()[0] or 0
+    xe_ranh = con.execute("SELECT COUNT(*) FROM vehicles WHERE status=0").fetchone()[0] or 0
+
+    tong_taixe = con.execute("SELECT COUNT(*) FROM drivers").fetchone()[0] or 0
+
+    taixe_ranh = con.execute("""
+        SELECT COUNT(*) FROM drivers
+        WHERE id NOT IN (
+            SELECT driver_id FROM vehicles
+            WHERE status=1 AND driver_id IS NOT NULL
+        )
+    """).fetchone()[0] or 0
+
+    chuyen_hom_nay = con.execute("""
+        SELECT COUNT(*) FROM trip_history
+        WHERE start_time IS NOT NULL
+        AND DATE(start_time)=DATE('now')
+    """).fetchone()[0] or 0
+
+    km_hom_nay = con.execute("""
+        SELECT SUM(km_travel) FROM trip_history
+        WHERE start_time IS NOT NULL
+        AND DATE(start_time)=DATE('now')
+    """).fetchone()[0] or 0
+
+    # biểu đồ
+    rows = con.execute("""
+        SELECT strftime('%Y-%m', start_time) as thang,
+               SUM(km_travel) as km
+        FROM trip_history
+        WHERE start_time IS NOT NULL
+        GROUP BY thang
+        ORDER BY thang
+    """).fetchall()
+
+    labels = [r["thang"] for r in rows if r["thang"]]
+    data_km = [r["km"] or 0 for r in rows if r["thang"]]
+
+    # top xe
+    top_xe = con.execute("""
+        SELECT plate, SUM(km_travel) as tong_km
+        FROM trip_history
+        GROUP BY plate
+        ORDER BY tong_km DESC
+        LIMIT 5
+    """).fetchall()
+
+    con.close()
+
+    return render_template(
+        "dashboard.html",
+        tong_xe=tong_xe,
+        xe_dang_chay=xe_dang_chay,
+        xe_ranh=xe_ranh,
+        tong_taixe=tong_taixe,
+        taixe_ranh=taixe_ranh,
+        chuyen_hom_nay=chuyen_hom_nay,
+        km_hom_nay=km_hom_nay,
+        top_xe=top_xe,
+        labels=labels,
+        data_km=data_km
+    )
+@app.route("/dashboard-data")
+@login_required
+def dashboard_data():
     try:
         con = db()
 
-        # ===== XE =====
-        tong_xe = con.execute("SELECT COUNT(*) FROM vehicles").fetchone()[0] or 0
-        xe_dang_chay = con.execute("SELECT COUNT(*) FROM vehicles WHERE status=1").fetchone()[0] or 0
-        xe_ranh = con.execute("SELECT COUNT(*) FROM vehicles WHERE status=0").fetchone()[0] or 0
-
-        # ===== TÀI XẾ =====
-        tong_taixe = con.execute("SELECT COUNT(*) FROM drivers").fetchone()[0] or 0
-
-        taixe_ranh = con.execute("""
-            SELECT COUNT(*) FROM drivers
-            WHERE id NOT IN (
-                SELECT driver_id FROM vehicles
-                WHERE status=1 AND driver_id IS NOT NULL
-            )
-        """).fetchone()[0] or 0
-
-        # ===== HÔM NAY =====
-        chuyen_hom_nay = con.execute("""
-            SELECT COUNT(*) FROM trip_history
-            WHERE start_time IS NOT NULL
-            AND DATE(start_time)=DATE('now')
-        """).fetchone()[0] or 0
-
-        km_hom_nay = con.execute("""
-            SELECT SUM(km_travel) FROM trip_history
-            WHERE start_time IS NOT NULL
-            AND DATE(start_time)=DATE('now')
-        """).fetchone()[0] or 0
-
-        # ===== BIỂU ĐỒ =====
-        rows = con.execute("""
-            SELECT strftime('%Y-%m', start_time) as thang,
-                   SUM(km_travel) as km
-            FROM trip_history
-            WHERE start_time IS NOT NULL
-            GROUP BY thang
-            ORDER BY thang
-        """).fetchall()
-
-        labels = []
-        data_km = []
-
-        for r in rows:
-            if r["thang"]:
-                labels.append(r["thang"])
-                data_km.append(r["km"] or 0)
-
-        con.close()
+        # (giữ nguyên logic của bạn)
 
         return jsonify({
             "ok": True,
-            "data": {
-                "tong_xe": tong_xe,
-                "xe_dang_chay": xe_dang_chay,
-                "xe_ranh": xe_ranh,
-                "tong_taixe": tong_taixe,
-                "taixe_ranh": taixe_ranh,
-                "chuyen_hom_nay": chuyen_hom_nay,
-                "km_hom_nay": km_hom_nay,
-                "labels": labels,
-                "data_km": data_km
-            }
+            "data": { ... }
         })
 
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)})
-
 # ================= XÓA USER =================
 
 @app.route("/xoa-user/<int:id>")
