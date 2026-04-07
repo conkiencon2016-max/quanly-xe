@@ -69,37 +69,37 @@ body{
 
 <div class="card">
 <div class="title">Tổng xe</div>
-<div class="number">{{ tong_xe }}</div>
+<div class="number" id="tong_xe">{{ tong_xe }}</div>
 </div>
 
 <div class="card">
 <div class="title">Xe đang chạy</div>
-<div class="number yellow">{{ xe_dang_chay }}</div>
+<div class="number yellow" id="xe_dang_chay">{{ xe_dang_chay }}</div>
 </div>
 
 <div class="card">
 <div class="title">Xe rảnh</div>
-<div class="number green">{{ xe_ranh }}</div>
+<div class="number green" id="xe_ranh">{{ xe_ranh }}</div>
 </div>
 
 <div class="card">
 <div class="title">Tài xế</div>
-<div class="number">{{ tong_taixe }}</div>
+<div class="number" id="tong_taixe">{{ tong_taixe }}</div>
 </div>
 
 <div class="card">
 <div class="title">Tài xế rảnh</div>
-<div class="number green">{{ taixe_ranh }}</div>
+<div class="number green" id="taixe_ranh">{{ taixe_ranh }}</div>
 </div>
 
 <div class="card">
 <div class="title">Chuyến hôm nay</div>
-<div class="number">{{ chuyen_hom_nay }}</div>
+<div class="number" id="chuyen_hom_nay">{{ chuyen_hom_nay }}</div>
 </div>
 
 <div class="card">
 <div class="title">KM hôm nay</div>
-<div class="number">{{ "{:,.0f}".format(km_hom_nay) }}</div>
+<div class="number" id="km_hom_nay">{{ km_hom_nay or 0 }}</div>
 </div>
 
 <div class="card">
@@ -154,6 +154,78 @@ new Chart(document.getElementById('chart'), {
     }
 });
 </script>
+<script>
+let chart;
 
+// format số
+function formatNumber(n){
+    return new Intl.NumberFormat().format(n || 0);
+}
+
+// cập nhật UI
+function updateUI(d){
+
+    document.querySelector("#tong_xe").innerText = d.tong_xe;
+    document.querySelector("#xe_dang_chay").innerText = d.xe_dang_chay;
+    document.querySelector("#xe_ranh").innerText = d.xe_ranh;
+    document.querySelector("#tong_taixe").innerText = d.tong_taixe;
+    document.querySelector("#taixe_ranh").innerText = d.taixe_ranh;
+    document.querySelector("#chuyen_hom_nay").innerText = d.chuyen_hom_nay;
+    document.querySelector("#km_hom_nay").innerText = formatNumber(d.km_hom_nay);
+
+    // cập nhật chart
+    if(chart){
+        chart.data.labels = d.labels;
+        chart.data.datasets[0].data = d.data_km;
+        chart.update();
+    }
+}
+
+// gọi API
+async function loadData(){
+    try{
+        const res = await fetch("/dashboard-data");
+        const json = await res.json();
+
+        if(json.ok){
+            updateUI(json.data);
+        }else{
+            console.error("API lỗi:", json.error);
+        }
+    }catch(e){
+        console.error("Fetch lỗi:", e);
+    }
+}
+
+// chạy realtime
+setInterval(loadData, 5000);
+loadData();
+</script>
+    <script>
+chart = new Chart(document.getElementById('chart'), {
+    type: 'bar',
+    data: {
+        labels: {{ labels|tojson }},
+        datasets: [{
+            label: 'KM',
+            data: {{ data_km|tojson }}
+        }]
+    }
+});
+</script>
+    <script>
+function highlight(){
+
+    const dang_chay = parseInt(document.getElementById("xe_dang_chay").innerText);
+
+    if(dang_chay > 5){
+        document.body.style.borderTop = "5px solid red";
+    }else{
+        document.body.style.borderTop = "5px solid green";
+    }
+}
+
+setInterval(highlight, 5000);
+</script>
 </body>
 </html>
