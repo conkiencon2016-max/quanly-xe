@@ -215,7 +215,11 @@ footer {
 <section class="menu">
 
 {% if session.get("role") in ["admin"] %}
-
+     div class="card">
+        <span class="icon">📊</span>
+        <h2>Tổng quan</h2>
+        <a href="/dashboard" class="btn-thongke">Vào chức năng</a>
+    </div> 
 
     <div class="card">
         <span class="icon">📝</span>
@@ -279,7 +283,12 @@ footer {
    
 
 {% elif role == "user" %}
-     <div class="card">
+ <div class="card">
+        <span class="icon">📊</span>
+        <h2>Tổng quan</h2>
+        <a href="/dashboard" class="btn-thongke">Vào chức năng</a>
+    </div>    
+ <div class="card">
         <span class="icon">📝</span>
         <h2>Yêu cầu điều xe</h2>
         <a href="/yeu-cau-dieu-xe" class="btn-dieuxe">Tạo yêu cầu</a>
@@ -313,9 +322,9 @@ footer {
         <span class="icon">📊</span>
         <h2>Thống kê</h2>
         <a href="/thong-ke" class="btn-thongke">Vào chức năng</a>
-    </div>>
     </div>
-
+    </div>
+    
 {% endif %}
 
 </section>
