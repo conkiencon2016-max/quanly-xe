@@ -3046,7 +3046,7 @@ def dashboard():
         data_km=data_km
     )
 # ================= dashboard-data =================    
-@app.route("/dashboard-data")
+@app.route("/dashboard-data_v2")
 @login_required
 def dashboard_data_v2():
     try:
