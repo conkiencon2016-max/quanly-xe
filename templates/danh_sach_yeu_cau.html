@@ -222,7 +222,13 @@ select{
         <div class="dash-number">{{ da }}</div>
         <div class="dash-icon">🟢</div>
     </div>
+   <div class="dash-box" style="border-left:6px solid #dc2626"
+     onclick="location.href='?sap_den_han=1'">
 
+    <div class="dash-title">Sắp đến hạn xử lý</div>
+    <div class="dash-number">{{ sap_den_han }}</div>
+    <div class="dash-icon">⏰</div>
+</div>
 </div>
 <div class="card">
 <div class="card" style="margin-bottom:15px">
@@ -266,6 +272,7 @@ select{
     <th>Ngày đi</th>
     <th>Ngày về</th>
     <th>Nội dung</th>
+    <th>Thời hạn xử lý (ngày)</th>
     <th style="min-width:280px">Xử lý</th> <!-- 🔥 FIX -->
 </tr>
 </thead>
@@ -292,7 +299,23 @@ select{
 <td>{{ r.ngay_di_dep }}</td>
 <td>{{ r.ngay_ve_dep }}</td>
 <td title="{{ r.muc_dich }}">{{ r.muc_dich }}</td>
-
+<td>
+    {% if r.han_xu_ly is not none %}
+        {% if r.han_xu_ly <= 0 %}
+            <span style="color:red;font-weight:600">
+                Quá hạn
+            </span>
+        {% elif r.han_xu_ly <= 2 %}
+            <span style="color:#dc2626;font-weight:600">
+                {{ r.han_xu_ly }}
+            </span>
+        {% else %}
+            {{ r.han_xu_ly }}
+        {% endif %}
+    {% else %}
+        -
+    {% endif %}
+</td>
 <td>
 
 {% if r.trang_thai == "cho_duyet" %}
