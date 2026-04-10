@@ -2659,7 +2659,7 @@ def yeu_cau_dieu_xe():
     con.close()
 
     return render_template(
-        "yeu_cau_dieu_xe1.html",
+        "yeu_cau_dieu_xe.html",
         data=data,
         tong=tong,
         cho=cho,
